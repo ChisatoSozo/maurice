@@ -1,0 +1,35 @@
+{
+  "name": "web-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node -e \"if (process.platform !== 'linux') { console.error('\\x1b[31mError: This script can only be run on Linux.\\x1b[0m'); process.exit(1); }\" && yarn gen && vite --host 0.0.0.0",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "gen": "yarn download-openapi && yarn generate-api && yarn rename-service",
+    "download-openapi": "wget -O openapi/openapi.json http://192.168.2.56:8080/api/spec/v2.json",
+    "generate-api": "openapi -i openapi/openapi.json -o src/api",
+    "rename-service": "sed -i '$d' src/api/index.ts && echo \"export { DefaultService as MauriceApi } from './services/DefaultService';\" >> src/api/index.ts"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react-swc": "^3.5.0",
+    "eslint": "^9.9.0",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "globals": "^15.9.0",
+    "openapi-typescript-codegen": "^0.29.0",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.0.1",
+    "vite": "^5.4.1"
+  }
+}
