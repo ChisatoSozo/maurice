@@ -5,7 +5,7 @@ use std::io::Write;
 const FULL_DEBUG_INFO: bool = false;
 
 pub fn init_logger() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
+    env_logger::Builder::from_env(Env::default().default_filter_or("debug"))
         .format(|buf, record| {
             let now = Local::now();
             if FULL_DEBUG_INFO {

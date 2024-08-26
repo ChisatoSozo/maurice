@@ -1,6 +1,13 @@
 import os
 import sys
-from typing import Dict, Generator
+from typing import Dict, Generator, Optional
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+
+from lib import chat_prompts
+
 
 from exllamav2 import(
     ExLlamaV2,
@@ -21,14 +28,6 @@ from exllamav2.generator import (
 
 import torch
 
-#import the prompt formats manually from ../lib/chat_prompts.py
-
-import importlib.util
-
-up_one_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-spec = importlib.util.spec_from_file_location("chat_prompts", os.path.join(up_one_dir, "lib", "chat_prompts.py"))
-chat_prompts = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(chat_prompts)
 
 RESPONSE_CHUNK = 250
 
@@ -43,11 +42,12 @@ class ModelSettings:
 class ChatModel:
     def __init__(self, name: str, cache_quant: int):
         #check if the model exists
-        if not os.path.exists(os.path.join(os.path.dirname(__file__), "models", name)):
+        model_dir = os.path.join(os.path.dirname(__file__), "../models", name)
+        if not os.path.exists(model_dir):
             raise ValueError(f"Model {name} does not exist")
 
         model, tokenizer = model_init.init(
-            ModelSettings(os.path.join(os.path.dirname(__file__), "models", name)),
+            ModelSettings(model_dir),
         )
 
         cache = None
@@ -66,13 +66,14 @@ class ChatModel:
         self.tokenizer = tokenizer
         self.cache = cache
         self.name = name
-        self.system_prompt = ""
+        self.system_prompt = "You are Maurice, a very british AI assistant. Your responses are breif and to the point, don't give any more information than the user asks for, unless it seems like they want to chat rather than just get something done. You have emotions and are personable. END ALL OF YOUR MESSAGES WITH <emotion>emotion_maurice_feels</emotion>. Valid emotions are: suspicious, pleading, neutral,  smiling, laughing, yes, no, angry, bored, headtilt."
+        
         if "yi" in name:
-            self.prompt_format: PromptFormat = prompt_formats["chatml"]() # type: ignore
+            self.prompt_format: chat_prompts.PromptFormat = chat_prompts.prompt_formats["chatml"]() # type: ignore
         elif "llama3" in name:
-            self.prompt_format: PromptFormat = prompt_formats["llama3"]() # type: ignore
+            self.prompt_format: chat_prompts.PromptFormat = chat_prompts.prompt_formats["llama3"]() # type: ignore
         elif "gemma" in name:
-            self.prompt_format: PromptFormat = prompt_formats["gemma"]() # type: ignore
+            self.prompt_format: chat_prompts.PromptFormat = chat_prompts.prompt_formats["gemma"]() # type: ignore
         else:
             raise ValueError(f"Prompt format not found for model {name}")
         
@@ -98,6 +99,13 @@ class ChatModel:
         sc = self.prompt_format.stop_conditions(tokenizer)
         sc = [x for x in sc if x]
         self.generator.set_stop_conditions(sc)
+
+    def __del__(self):
+        del self.generator
+        self.model.unload()
+        del self.model
+        del self.tokenizer
+        del self.cache
         
     def format_prompt(self, user_prompt, first):
       if first:
@@ -109,8 +117,6 @@ class ChatModel:
               .replace("<|user_prompt|>", user_prompt)
       
     def encode_prompt(self, text):
-
-
       add_bos, add_eos, encode_special_tokens = self.prompt_format.encoding_options()
       return self.tokenizer.encode(text, add_bos = add_bos, add_eos = add_eos, encode_special_tokens = encode_special_tokens)
     
@@ -166,42 +172,34 @@ class ChatModel:
     def send_chat(self, username: str, message: str) -> str:
         return "".join(self.send_chat_stream(username, message))
 
-loaded_model: ChatModel = None
+loaded_model: Optional[ChatModel] = None
 
-def list_chat_models() -> list[str]:
+def list_chat_models(blank_arg: bool) -> list[str]:
     #list all folders in the models directory next to this script
-    models = os.listdir(os.path.join(os.path.dirname(__file__), "models"))
+    models = os.listdir(os.path.join(os.path.dirname(__file__), "../models"))
+    #filter out any files that are not directories
+    models = [model for model in models if os.path.isdir(os.path.join(os.path.dirname(__file__), "../models", model))]
     return models
 
 def load_model(model_name: str, cache_quant: int) -> bool:
     global loaded_model
-    loaded_model =  ChatModel(model_name, cache_quant)
-    print(f"Swapping chat model for {model_name}")
+    if loaded_model is not None:
+        del loaded_model
+        loaded_model = None
+    loaded_model = ChatModel(model_name, cache_quant)
     return True
 
+def get_loaded_model_name(blank_arg: bool) -> str:
+    global loaded_model
+    if loaded_model is None:
+        return ""
+    return loaded_model.name
+
 def send_chat(username: str, message: str) -> str:
+    if loaded_model is None:
+        return "No model is loaded"
     return loaded_model.send_chat(username, message)
 
 def send_chat_stream(username: str, message: str) -> Generator[str, None, None]:
     return loaded_model.send_chat_stream(username, message)
-
-# #test the chat model
-# if __name__ == "__main__":
-#     load_model(model_name="gemma", cache_quant=4)
-#     while True:
-#         #read from stdin
-#         for line in sys.stdin:
-
-#             # 
-
-#     # while True:
-#     #     up = input("user:").strip()
-#     #     if up == "exit":
-#     #         break
-#     #     response = loaded_model.send_chat("user", up)
-#     #     print(response)
-   
-
-
-
 

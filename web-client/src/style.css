@@ -1,0 +1,174 @@
+@keyframes foo {
+  from {
+    transform: translate(0 25px) rotate(-30deg);
+  }
+  50% {
+    transform: translate(0 25px) rotate(30deg);
+  }
+  to {
+    transform: translate(0 25px) rotate(-30deg);
+  }
+}
+#face {
+  display: flex;
+  transition: transform 0.5s;
+  margin-bottom: 40px;
+}
+.right {
+  transform: scaleX(-1);
+}
+
+.bg {
+  position: relative;
+  background: white;
+  width: 200px;
+  height: 200px;
+}
+svg {
+  position: absolute;
+  inset: -13px;
+}
+.eye {
+  position: absolute;
+  border-radius: 50%;
+  overflow: hidden;
+  inset: 13px;
+  width: 174px;
+  height: 174px;
+}
+.border {
+  position: absolute;
+  border: solid 24px black;
+  inset: 0.3px;
+  border-radius: 50%;
+  transition: transform 0.5s;
+}
+.lid {
+  transition: transform 0.5s, d 0.5s;
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-origin: 50% 50%;
+}
+.upper {
+  transform: translateY(-100px);
+}
+.lower {
+  transform: translateY(120px);
+}
+.iris {
+  position: absolute;
+  border-radius: 50%;
+  inset: 18px;
+  width: 90px;
+  height: 90px;
+  background: black;
+  transition: transform 0.5;
+  transform: translateY(19px);
+}
+button::before {
+  content: attr(id);
+}
+
+@keyframes suspicious {
+  from {
+    transform: rotate(-30deg) translate(0, 17px);
+  }
+  50% {
+    transform: rotate(30deg) translate(0, 17px);
+  }
+  to {
+    transform: rotate(-30deg) translate(0, 17px);
+  }
+}
+@keyframes yes {
+  from,
+  to {
+    transform: translateY(20px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+@keyframes no {
+  from,
+  to {
+    transform: translateX(20px);
+  }
+  50% {
+    transform: translateX(-20px);
+  }
+}
+
+.headtilt {
+  transform: rotate(-10deg);
+}
+
+.angry .upper {
+  d: path("M 0,0 V 100 q 100,0 200,0 V 0 Z");
+  transform: rotate(20deg) translateY(-40px);
+}
+.angry .lower {
+  transform: translateY(100px);
+}
+
+.laughing .upper {
+  d: path("M -10,0 V 100 q 100,0 220,0 V 0 Z");
+  transform: rotate(20deg) translateY(-30px);
+}
+.laughing .lower {
+  d: path("M -10,100 q 100,0 220,0 V 200 H 0 V 100 z");
+  transform: rotate(-20deg) translateY(30px);
+}
+.laughing .border {
+  opacity: 0;
+  transition-delay: 0.5s;
+}
+.smiling .lid {
+  transform: translateY(0);
+}
+
+.suspicious .upper,
+.bored .upper {
+  d: path("M -10,0 V 100 q 100,0 220,0 V 0 Z");
+  transform: translateY(-30px);
+}
+.suspicious .lower {
+  d: path("M -10,100 q 100,0 220,0 V 200 H 0 V 100 z");
+  transform: translateY(30px);
+}
+.suspicious .iris{
+  animation:suspicious 1.5s infinite
+}
+.suspicious .right{
+  transform:scaleX(1)
+}
+
+.glint {
+  background: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin: 10px;
+  transform: scale(0);
+  transition: transform 0.5s;
+}
+
+.pleading .iris {
+  transform: scale(1.2) !important;
+}
+.pleading .glint {
+  transform: scale(1);
+}
+.pleading .upper {
+  d: path("M -10,0 V 100 q 100,0 220,0 V 0 Z");
+  transform: translateY(-60px) rotate(-20deg);
+}
+.no {
+  animation: no 0.5s infinite;
+}
+.yes {
+  animation: yes 0.5s infinite;
+}

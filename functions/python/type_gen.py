@@ -6,6 +6,9 @@ import json
 from typing import get_origin, get_args, Generator, List, Dict, Union, Optional
 from dataclasses import is_dataclass, fields
 
+def pascal_case(s):
+    return ''.join(word.capitalize() for word in s.replace('_', ' ').split())
+
 def is_generator(py_type):
     return get_origin(py_type) == Generator or inspect.isgeneratorfunction(py_type) or get_origin(py_type) == collections.abc.Generator
 
@@ -67,30 +70,42 @@ def generate_function_schema(func):
     signature = inspect.signature(func)
     return_annotation = signature.return_annotation
 
-    properties = {}
-    required = []
+    args_properties = {}
+    args_required = []
 
     for param_name, param in signature.parameters.items():
-        properties[param_name] = python_type_to_json_schema(param.annotation)
+        args_properties[param_name] = python_type_to_json_schema(param.annotation)
         if param.default == param.empty:
-            required.append(param_name)
+            args_required.append(param_name)
 
     return_schema = python_type_to_json_schema(return_annotation)
-    return_schema["stream"] = is_generator(return_annotation)
+    is_stream = is_generator(return_annotation)
+
+    args_name = f"{pascal_case(func.__name__)}Args"
+    return_name = f"{pascal_case(func.__name__)}Return"
 
     schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {
             "name": {"type": "string", "const": func.__name__},
-            "args": {
-                "type": "object",
-                "properties": properties,
-                "required": required
-            },
-            "return": return_schema
+            "args": {"$ref": f"#/definitions/{args_name}"},
+            "return": {"$ref": f"#/definitions/{return_name}"}
         },
-        "required": ["name", "args", "return"]
+        "required": ["name", "args", "return"],
+        "definitions": {
+            args_name: {
+                "type": "object",
+                "properties": args_properties,
+                "required": args_required
+            } if len(args_properties.keys()) > 0 else {
+                "type": "null"
+            },
+            return_name: {
+                **return_schema,
+                "stream": is_stream
+            }
+        }
     }
 
     return schema
@@ -117,11 +132,22 @@ def generate_schemas_for_directory(directory):
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "properties": {},
-        "additionalProperties": False
+        "additionalProperties": False,
+        "definitions": {}
     }
     for func_name, func in functions.items():
         try:
-            schemas["properties"][func_name] = generate_function_schema(func)
+            func_schema = generate_function_schema(func)
+            schemas["properties"][func_name] = {
+                "type": "object",
+                "properties": {
+                    "name": func_schema["properties"]["name"],
+                    "args": func_schema["properties"]["args"],
+                    "return": func_schema["properties"]["return"]
+                },
+                "required": func_schema["required"]
+            }
+            schemas["definitions"].update(func_schema["definitions"])
         except Exception as e:
             print(f"Error generating schema for {func_name}: {str(e)}")
     return schemas

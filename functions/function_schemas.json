@@ -2,8 +2,27 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "get_loaded_model_name": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "get_loaded_model_name"
+        },
+        "args": {
+          "$ref": "#/definitions/GetLoadedModelNameArgs"
+        },
+        "return": {
+          "$ref": "#/definitions/GetLoadedModelNameReturn"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return"
+      ]
+    },
     "list_chat_models": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "type": "object",
       "properties": {
         "name": {
@@ -11,16 +30,10 @@
           "const": "list_chat_models"
         },
         "args": {
-          "type": "object",
-          "properties": {},
-          "required": []
+          "$ref": "#/definitions/ListChatModelsArgs"
         },
         "return": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "stream": false
+          "$ref": "#/definitions/ListChatModelsReturn"
         }
       },
       "required": [
@@ -30,7 +43,6 @@
       ]
     },
     "load_model": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "type": "object",
       "properties": {
         "name": {
@@ -38,23 +50,10 @@
           "const": "load_model"
         },
         "args": {
-          "type": "object",
-          "properties": {
-            "model_name": {
-              "type": "string"
-            },
-            "cache_quant": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "model_name",
-            "cache_quant"
-          ]
+          "$ref": "#/definitions/LoadModelArgs"
         },
         "return": {
-          "type": "boolean",
-          "stream": false
+          "$ref": "#/definitions/LoadModelReturn"
         }
       },
       "required": [
@@ -64,7 +63,6 @@
       ]
     },
     "send_chat": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "type": "object",
       "properties": {
         "name": {
@@ -72,23 +70,10 @@
           "const": "send_chat"
         },
         "args": {
-          "type": "object",
-          "properties": {
-            "username": {
-              "type": "string"
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "username",
-            "message"
-          ]
+          "$ref": "#/definitions/SendChatArgs"
         },
         "return": {
-          "type": "string",
-          "stream": false
+          "$ref": "#/definitions/SendChatReturn"
         }
       },
       "required": [
@@ -98,7 +83,6 @@
       ]
     },
     "send_chat_stream": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "type": "object",
       "properties": {
         "name": {
@@ -106,23 +90,10 @@
           "const": "send_chat_stream"
         },
         "args": {
-          "type": "object",
-          "properties": {
-            "username": {
-              "type": "string"
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "username",
-            "message"
-          ]
+          "$ref": "#/definitions/SendChatStreamArgs"
         },
         "return": {
-          "type": "string",
-          "stream": true
+          "$ref": "#/definitions/SendChatStreamReturn"
         }
       },
       "required": [
@@ -132,5 +103,97 @@
       ]
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "GetLoadedModelNameArgs": {
+      "type": "object",
+      "properties": {
+        "blank_arg": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blank_arg"
+      ]
+    },
+    "GetLoadedModelNameReturn": {
+      "type": "string",
+      "stream": false
+    },
+    "ListChatModelsArgs": {
+      "type": "object",
+      "properties": {
+        "blank_arg": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blank_arg"
+      ]
+    },
+    "ListChatModelsReturn": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "stream": false
+    },
+    "LoadModelArgs": {
+      "type": "object",
+      "properties": {
+        "model_name": {
+          "type": "string"
+        },
+        "cache_quant": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_name",
+        "cache_quant"
+      ]
+    },
+    "LoadModelReturn": {
+      "type": "boolean",
+      "stream": false
+    },
+    "SendChatArgs": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "message"
+      ]
+    },
+    "SendChatReturn": {
+      "type": "string",
+      "stream": false
+    },
+    "SendChatStreamArgs": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "message"
+      ]
+    },
+    "SendChatStreamReturn": {
+      "type": "string",
+      "stream": true
+    }
+  }
 }

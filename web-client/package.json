@@ -10,13 +10,18 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "gen": "yarn download-openapi && yarn generate-api && yarn rename-service",
-    "download-openapi": "wget -O openapi/openapi.json http://192.168.2.56:8080/api/spec/v2.json",
+    "download-openapi": "wget -O openapi/openapi.json http://localhost:8080/api/spec/v2.json",
     "generate-api": "openapi -i openapi/openapi.json -o src/api",
     "rename-service": "sed -i '$d' src/api/index.ts && echo \"export { DefaultService as MauriceApi } from './services/DefaultService';\" >> src/api/index.ts"
   },
   "dependencies": {
+    "@mantine/core": "^7.12.1",
+    "@mantine/hooks": "^7.12.1",
+    "@mantine/notifications": "^7.12.1",
+    "@types/swagger-ui-react": "^4.18.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "swagger-ui-react": "^5.17.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
@@ -28,6 +33,9 @@
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
     "openapi-typescript-codegen": "^0.29.0",
+    "postcss": "^8.4.41",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"

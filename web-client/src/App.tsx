@@ -1,23 +1,39 @@
-import { useState } from 'react'
-import { MauriceApi } from './api'
+import { Box } from "@mantine/core";
+import { LoadChatModel } from "./components/LoadChatModel";
+import { Chat } from "./components/Chat";
+import { Emotion, Face } from "./components/Face";
+import { useState } from "react";
 
 export const App = () => {
-  const [name, setName] = useState('')
-  const [serverResponse, setServerResponse] = useState('')
-
-  const getServerResponse = async () => {
-    MauriceApi.postApiSayHello({name})
-      .then((response) => setServerResponse(response.message))
-  }
-
+  const [emotion, setEmotion] = useState<Emotion>("neutral");
   return (
-    <div>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <button onClick={getServerResponse}>Say Hello</button>
-      <div>{serverResponse}</div>
-    </div>
-  )
-}
+    <Box
+      h="100dvh"
+      w="100vw"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Box
+        pos="absolute"
+        w="100vw"
+        top={50}
+        left={-25}
+        display="flex"
+        style={{
+          justifyContent: "center",
+        }}
+      >
+        <Face emotion={emotion} />
+      </Box>
+
+      <Box w="100%">
+        <LoadChatModel />
+      </Box>
+      <Box flex={1} w="100%" mih={0}>
+        <Chat setEmotion={setEmotion} />
+      </Box>
+    </Box>
+  );
+};
