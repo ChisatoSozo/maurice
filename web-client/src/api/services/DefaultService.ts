@@ -4,12 +4,19 @@
 /* eslint-disable */
 import type { GetLoadedModelNameArgs } from '../models/GetLoadedModelNameArgs';
 import type { GetLoadedModelNameReturn } from '../models/GetLoadedModelNameReturn';
+import type { GetSpeakersReturn } from '../models/GetSpeakersReturn';
+import type { GetVolumeArgs } from '../models/GetVolumeArgs';
+import type { GetVolumeReturn } from '../models/GetVolumeReturn';
+import type { GetYoutubeVideosArgs } from '../models/GetYoutubeVideosArgs';
+import type { GetYoutubeVideosReturn } from '../models/GetYoutubeVideosReturn';
 import type { ListChatModelsArgs } from '../models/ListChatModelsArgs';
 import type { ListChatModelsReturn } from '../models/ListChatModelsReturn';
 import type { LoadModelArgs } from '../models/LoadModelArgs';
 import type { LoadModelReturn } from '../models/LoadModelReturn';
+import type { PlayAudioArgs } from '../models/PlayAudioArgs';
 import type { SendChatArgs } from '../models/SendChatArgs';
 import type { SendChatReturn } from '../models/SendChatReturn';
+import type { SetVolumeArgs } from '../models/SetVolumeArgs';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -25,6 +32,44 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/get_loaded_model_name',
+            body: body,
+        });
+    }
+    /**
+     * @returns GetSpeakersReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetSpeakers(): CancelablePromise<GetSpeakersReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_speakers',
+        });
+    }
+    /**
+     * @param body
+     * @returns GetVolumeReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetVolume(
+        body: GetVolumeArgs,
+    ): CancelablePromise<GetVolumeReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_volume',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns GetYoutubeVideosReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetYoutubeVideos(
+        body: GetYoutubeVideosArgs,
+    ): CancelablePromise<GetYoutubeVideosReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_youtube_videos',
             body: body,
         });
     }
@@ -58,6 +103,20 @@ export class DefaultService {
     }
     /**
      * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiPlayAudio(
+        body: PlayAudioArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/play_audio',
+            body: body,
+        });
+    }
+    /**
+     * @param body
      * @returns SendChatReturn OK
      * @throws ApiError
      */
@@ -67,6 +126,20 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/send_chat',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiSetVolume(
+        body: SetVolumeArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/set_volume',
             body: body,
         });
     }

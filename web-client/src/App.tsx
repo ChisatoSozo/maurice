@@ -1,39 +1,74 @@
-import { Box } from "@mantine/core";
-import { LoadChatModel } from "./components/LoadChatModel";
-import { Chat } from "./components/Chat";
-import { Emotion, Face } from "./components/Face";
-import { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
+import { pages } from "./constants";
+import { Box, Button, Typography } from "@mui/material";
 
-export const App = () => {
-  const [emotion, setEmotion] = useState<Emotion>("neutral");
+const NavBar = () => {
+  const location = useLocation();
+
+  const page = pages.find((page) => page.path === location.pathname);
+
   return (
     <Box
-      h="100dvh"
-      w="100vw"
       style={{
         display: "flex",
-        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        height: 50,
+        borderBottom: "1px solid #000",
       }}
     >
-      <Box
-        pos="absolute"
-        w="100vw"
-        top={50}
-        left={-25}
-        display="flex"
+      <Button
+        onClick={() => {
+          history.back();
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}
         style={{
-          justifyContent: "center",
+          position: "absolute",
+          left: 10,
         }}
       >
-        <Face emotion={emotion} />
-      </Box>
-
-      <Box w="100%">
-        <LoadChatModel />
-      </Box>
-      <Box flex={1} w="100%" mih={0}>
-        <Chat setEmotion={setEmotion} />
-      </Box>
+        Back
+      </Button>
+      <Typography>{page?.name}</Typography>
     </Box>
+  );
+};
+
+export const App = () => {
+  return (
+    <Router>
+      <Box
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: "100dvw",
+          height: "100dvh",
+        }}
+      >
+        <NavBar />
+        <Box
+          style={{
+            flex: 1,
+            width: "100%",
+            minHeight: 0,
+          }}
+        >
+          <Routes>
+            {pages.map((page) => (
+              <Route
+                key={page.path}
+                path={page.path}
+                element={page.component}
+              />
+            ))}
+          </Routes>
+        </Box>
+      </Box>
+    </Router>
   );
 };

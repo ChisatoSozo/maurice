@@ -1,11 +1,11 @@
 use crate::{
-    model::{Content, Message, MessageContent},
+    model::{Content, Message},
     schema::{contents, message_contents, messages},
     GlobalState,
 };
 use actix_web::{
     web::{Data, Json},
-    Error, HttpResponse,
+    Error,
 };
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;

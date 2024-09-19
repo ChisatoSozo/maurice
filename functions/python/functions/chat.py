@@ -8,27 +8,6 @@ sys.path.append(parent_dir)
 
 from lib import chat_prompts
 
-
-from exllamav2 import(
-    ExLlamaV2,
-    ExLlamaV2Config,
-    ExLlamaV2Cache,
-    ExLlamaV2Cache_8bit,
-    ExLlamaV2Cache_Q4,
-    ExLlamaV2Cache_Q6,
-    ExLlamaV2Cache_Q8,
-    ExLlamaV2Tokenizer,
-    model_init,   
-)
-
-from exllamav2.generator import (
-    ExLlamaV2StreamingGenerator,
-    ExLlamaV2Sampler
-)
-
-import torch
-
-
 RESPONSE_CHUNK = 250
 
 class ModelSettings:
@@ -41,6 +20,18 @@ class ModelSettings:
 
 class ChatModel:
     def __init__(self, name: str, cache_quant: int):
+        from exllamav2 import(
+            ExLlamaV2Cache,
+            ExLlamaV2Cache_Q4,
+            ExLlamaV2Cache_Q6,
+            ExLlamaV2Cache_Q8,
+            model_init,   
+        )
+
+        from exllamav2.generator import (
+            ExLlamaV2StreamingGenerator,
+            ExLlamaV2Sampler
+        )
         #check if the model exists
         model_dir = os.path.join(os.path.dirname(__file__), "../models", name)
         if not os.path.exists(model_dir):
@@ -121,6 +112,7 @@ class ChatModel:
       return self.tokenizer.encode(text, add_bos = add_bos, add_eos = add_eos, encode_special_tokens = encode_special_tokens)
     
     def get_tokenized_context(self, max_len: int):
+      import torch
       while True:
 
           context = torch.empty((1, 0), dtype=torch.long)
@@ -143,6 +135,7 @@ class ChatModel:
           self.responses_ids = self.responses_ids[1:]
 
     def send_chat_stream(self, username: str, message: str) -> Generator[str, None, None]:
+        import torch
         self.user_prompts.append(message)
         active_context = self.get_tokenized_context(self.model.config.max_seq_len - RESPONSE_CHUNK)
         self.generator.begin_stream_ex(active_context, self.settings)

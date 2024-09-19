@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node -e \"if (process.platform !== 'linux') { console.error('\\x1b[31mError: This script can only be run on Linux.\\x1b[0m'); process.exit(1); }\" && yarn gen && vite --host 0.0.0.0",
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 80",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -15,12 +15,17 @@
     "rename-service": "sed -i '$d' src/api/index.ts && echo \"export { DefaultService as MauriceApi } from './services/DefaultService';\" >> src/api/index.ts"
   },
   "dependencies": {
-    "@mantine/core": "^7.12.1",
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@fontsource/roboto": "^5.1.0",
     "@mantine/hooks": "^7.12.1",
-    "@mantine/notifications": "^7.12.1",
+    "@mui/icons-material": "^6.1.0",
+    "@mui/material": "^6.1.0",
     "@types/swagger-ui-react": "^4.18.3",
+    "ramda": "^0.30.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
     "swagger-ui-react": "^5.17.14"
   },
   "devDependencies": {

@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 pub struct PythonProcess {
-    child: std::process::Child,
+    pub child: std::process::Child,
     stdin: std::process::ChildStdin,
     stdout: BufReader<std::process::ChildStdout>,
 }

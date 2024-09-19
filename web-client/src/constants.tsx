@@ -1,0 +1,22 @@
+import { AudioPage } from "./pages/AudioPage";
+
+import { HomePage } from "./pages/HomePage";
+
+type Page = {
+  name: string;
+  component: React.ReactNode;
+  path: string;
+};
+
+export const pages: Page[] = [
+  {
+    name: "Home",
+    component: <HomePage />,
+    path: "/",
+  },
+  {
+    name: "Audio",
+    component: <AudioPage />,
+    path: "/audio",
+  },
+];
