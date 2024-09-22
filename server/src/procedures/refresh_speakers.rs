@@ -7,7 +7,7 @@ pub fn refresh_speakers(speakers: &mut MultiSpeaker) -> Result<(), Box<dyn Error
     let speaker_names: Vec<String> = devices.into_iter().map(|device| device.name).collect();
     for speaker_name in speaker_names {
         if !speakers.has_speaker(&speaker_name) {
-            speakers.add_speaker(speaker_name.clone(), speaker_name);
+            speakers.add_speaker(speaker_name.clone(), speaker_name)?;
         }
     }
     Ok(())

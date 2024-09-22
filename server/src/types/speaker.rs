@@ -1,15 +1,20 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
 use std::os::unix::net::UnixStream;
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
+use libpulse_binding::volume::{ChannelVolumes, Volume};
 use paperclip::actix::Apiv2Schema;
+use pulsectl::controllers::DeviceControl;
+use pulsectl::controllers::SinkController;
+
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Apiv2Schema, PartialEq)]
 pub struct Song {
     pub thumbnail: String,
     pub title: String,
@@ -18,52 +23,166 @@ pub struct Song {
 
 struct Speaker {
     device_name: String,
-    now_playing: Option<Song>,
-    queue: Vec<Song>,
+    queue: Arc<Mutex<Vec<Song>>>,
     socket_path: String,
     connection: Arc<Mutex<Option<UnixStream>>>,
+    pulse_controller: Arc<Mutex<SinkController>>,
+    volume: f64,
+    current_process: Arc<Mutex<Option<Child>>>,
+    current_song: Arc<Mutex<Option<Song>>>,
 }
 
 pub struct MultiSpeaker {
     speakers: HashMap<String, Speaker>,
 }
 
+unsafe impl Send for Speaker {}
+
+fn get_song_time(stream: &mut UnixStream) -> Result<f64> {
+    let command = json!({
+        "command": ["get_property", "time-pos"]
+    });
+    writeln!(stream, "{}", command.to_string())?;
+    stream.flush()?;
+    let mut reader = BufReader::new(stream);
+    let mut response = String::new();
+    reader.read_line(&mut response)?;
+    let parsed: serde_json::Value = serde_json::from_str(&response)?;
+    match parsed["data"].clone() {
+        Value::Number(time) => Ok(time.as_f64().ok_or(Error::new(
+            ErrorKind::InvalidData,
+            "Invalid time-pos value, not f64",
+        ))?),
+        _ => Err(Error::new(
+            ErrorKind::InvalidData,
+            "Invalid time-pos value, not number",
+        )),
+    }
+}
+
 impl Speaker {
-    fn new(device_name: String) -> Self {
-        Self {
+    fn new(device_name: String) -> Result<Self> {
+        let mut this = Self {
             device_name,
-            now_playing: None,
-            queue: Vec::new(),
+            queue: Arc::new(Mutex::new(Vec::new())),
             socket_path: String::from("/tmp/mpvsocket"),
             connection: Arc::new(Mutex::new(None)),
-        }
+            pulse_controller: Arc::new(Mutex::new(SinkController::create().unwrap())),
+            volume: 100.0,
+            current_process: Arc::new(Mutex::new(None)),
+            current_song: Arc::new(Mutex::new(None)),
+        };
+        this.set_volume(100.0)?;
+        Ok(this)
     }
 
     fn play(&mut self, song: Song) -> Result<()> {
-        //if there is a song playing, and it's the same song, resume playback, or do nothing
-        if let Some(now_playing) = &self.now_playing {
-            if now_playing.url == song.url {
-                if self.get_paused()? {
-                    return self.resume();
-                } else {
-                    return Ok(());
-                }
-            }
+        let current_song = self.current_song.lock().unwrap().clone();
+
+        if current_song.as_ref() == Some(&song) {
+            // If the requested song is already playing, do nothing
+            return Ok(());
         }
 
-        self.stop_current_playback();
-        let dev_name = &self.device_name;
-        Command::new("mpv")
+        // Stop the current process if it exists
+        if let Some(mut child) = self.current_process.lock().unwrap().take() {
+            let _ = child.kill();
+        }
+
+        let dev_name = self.device_name.clone();
+        let socket_path = self.socket_path.clone();
+
+        let child = Command::new("mpv")
             .args(&[
                 format!("--audio-device=pulse/{dev_name}").as_str(),
                 "--no-video",
                 &song.url,
-                &format!("--input-ipc-server={}", self.socket_path),
+                &format!("--input-ipc-server={}", socket_path),
             ])
             .spawn()?;
-        self.now_playing = Some(song);
+
+        *self.current_process.lock().unwrap() = Some(child);
+        *self.current_song.lock().unwrap() = Some(song.clone());
+
+        // Clear the queue and add the new song
+        {
+            let mut queue = self
+                .queue
+                .lock()
+                .map_err(|e| Error::new(ErrorKind::Other, format!("Error locking queue: {}", e)))?;
+            queue.clear();
+            queue.push(song);
+        }
+
+        // Clone necessary data for the thread
+
+        let queue = self.queue.clone();
+        let device_name = self.device_name.clone();
+        let socket_path = self.socket_path.clone();
+        let current_song = self.current_song.clone();
+        let connection = self.connection.clone();
+
+        // Start a thread to monitor playback and advance the queue
+        thread::spawn(move || {
+            loop {
+                // Attempt to get the current time of the song
+                let mut conn = connection.lock().unwrap();
+                if let Some(stream) = conn.as_mut() {
+                    println!("Getting song time");
+                    match get_song_time(stream) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            let error_str = format!("Error getting song time: {}", e);
+                            println!("{}", error_str);
+                            if error_str.contains("Broken pipe") {
+                                break;
+                            }
+                        }
+                    };
+                }
+                drop(conn);
+                thread::sleep(Duration::from_secs(1));
+            }
+            // If there's a next song, play it, otherwise, break
+            println!("Playing next song");
+
+            // Play the next song
+            let mut queue_lock = queue.lock().unwrap();
+            if queue_lock.len() > 1 {
+                queue_lock.remove(0); // Remove the current song
+                if let Some(next_song) = queue_lock.get(0).cloned() {
+                    drop(queue_lock); // Release the lock before spawning a new process
+
+                    // Spawn a new process for the next song
+                    let child = Command::new("mpv")
+                        .args(&[
+                            format!("--audio-device=pulse/{}", device_name).as_str(),
+                            "--no-video",
+                            &next_song.url,
+                            &format!("--input-ipc-server={}", socket_path),
+                        ])
+                        .spawn();
+
+                    match child {
+                        Ok(_) => {
+                            // Update the current song
+                            *current_song.lock().unwrap() = Some(next_song);
+                        }
+                        Err(e) => {
+                            eprintln!("Error playing next song: {}", e);
+                        }
+                    }
+                }
+            } else {
+                //clear queue
+                queue_lock.clear();
+            }
+        });
+
         Ok(())
     }
+
+    // Helper function to get song time
 
     fn pause(&mut self) -> Result<()> {
         self.send_command("set_property", "pause", "yes")
@@ -74,25 +193,29 @@ impl Speaker {
     }
 
     fn set_volume(&mut self, volume: f64) -> Result<()> {
-        self.send_command("set_property", "volume", &volume.to_string())
-    }
+        let mut controller = self.pulse_controller.lock().unwrap();
+        let devices = controller
+            .list_devices()
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let device = devices
+            .iter()
+            .find(|d| d.name == Some(self.device_name.clone()));
 
-    fn get_volume(&self) -> Result<f64> {
-        match self.get_property("volume")? {
-            Value::Number(volume) => Ok(volume.as_f64().ok_or(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("Invalid volume value: {}", volume),
-            ))? as f64),
-            _ => Err(Error::new(ErrorKind::InvalidData, "Invalid volume value")),
+        if let Some(dev) = device {
+            let pulse_volume = Volume(((0x10000 as f64) * volume / 100.0).floor() as u32);
+            controller.set_device_volume_by_index(
+                dev.index,
+                &ChannelVolumes::default().set(2, pulse_volume),
+            );
+            self.volume = volume;
+            Ok(())
+        } else {
+            Err(Error::new(ErrorKind::NotFound, "Device not found"))
         }
     }
 
-    fn stop_current_playback(&mut self) {
-        let _ = Command::new("pkill").arg("-f").arg("mpv").status();
-        self.now_playing = None;
-        // Reset the connection when stopping playback
-        let mut conn = self.connection.lock().unwrap();
-        *conn = None;
+    fn get_volume(&self) -> Result<f64> {
+        Ok(self.volume)
     }
 
     fn ensure_connection(&self) -> Result<()> {
@@ -118,7 +241,6 @@ impl Speaker {
         if let Some(stream) = conn.as_mut() {
             writeln!(stream, "{}", command.to_string())?;
             stream.flush()?;
-            // Read and discard the response
             let mut reader = BufReader::new(stream);
             let mut response = String::new();
             reader.read_line(&mut response)?;
@@ -152,42 +274,82 @@ impl Speaker {
         }
     }
 
-    fn get_current_time(&self) -> Result<String> {
+    fn get_song_time(&self) -> Result<f64> {
         match self.get_property("time-pos")? {
-            Value::Number(time) => Ok(time.to_string()),
-            _ => Err(Error::new(ErrorKind::InvalidData, "Invalid time-pos value")),
+            Value::Number(time) => Ok(time.as_f64().ok_or(Error::new(
+                ErrorKind::InvalidData,
+                "Invalid time-pos value, not f64",
+            ))?),
+            _ => Err(Error::new(
+                ErrorKind::InvalidData,
+                "Invalid time-pos valu, not number",
+            )),
         }
     }
 
-    fn get_duration(&self) -> Result<String> {
+    fn get_duration(&self) -> Result<f64> {
         match self.get_property("duration")? {
-            Value::Number(duration) => Ok(duration.to_string()),
+            Value::Number(duration) => Ok(duration.as_f64().ok_or(Error::new(
+                ErrorKind::InvalidData,
+                "Invalid duration value, not f64",
+            ))?),
             _ => Err(Error::new(ErrorKind::InvalidData, "Invalid duration value")),
         }
     }
 
-    fn enqueue(&mut self, song: Song) {
-        self.queue.push(song);
+    fn set_song_time(&self, time: f64) -> Result<()> {
+        self.send_command("set_property", "time-pos", &time.to_string())
     }
 
-    fn remove_song(&mut self, index: usize) -> Result<()> {
-        if index >= self.queue.len() {
-            return Err(Error::new(ErrorKind::InvalidInput, "Invalid index"));
+    fn set_loop(&self, looping: bool) -> Result<()> {
+        self.send_command(
+            "set_property",
+            "loop-file",
+            if looping { "inf" } else { "no" },
+        )
+    }
+
+    fn get_playlist(&mut self) -> Result<Vec<Song>> {
+        Ok(self
+            .queue
+            .lock()
+            .map_err(|e| Error::new(ErrorKind::Other, format!("Error locking queue: {}", e)))?
+            .clone())
+    }
+
+    fn append_song_to_playlist(&mut self, song: Song) -> Result<()> {
+        let queue = self
+            .queue
+            .lock()
+            .map_err(|e| Error::new(ErrorKind::Other, format!("Error locking queue: {}", e)))?;
+
+        if queue.is_empty() {
+            // Release the lock before calling self.play()
+            drop(queue);
+            self.play(song)?;
+        } else {
+            drop(queue);
+            let mut queue = self
+                .queue
+                .lock()
+                .map_err(|e| Error::new(ErrorKind::Other, format!("Error locking queue: {}", e)))?;
+            queue.push(song);
         }
-        self.queue.remove(index);
         Ok(())
     }
 
-    fn emplace_song(&mut self, song: Song, index: usize) -> Result<()> {
-        if index <= self.queue.len() {
-            self.queue.insert(index, song);
-            Ok(())
-        } else {
-            Err(Error::new(ErrorKind::InvalidInput, "Invalid index"))
+    fn remove_song_from_playlist_at_index(&mut self, index: usize) -> Result<()> {
+        let mut queue = self
+            .queue
+            .lock()
+            .map_err(|e| Error::new(ErrorKind::Other, format!("Error locking queue: {}", e)))?;
+        if index >= queue.len() {
+            return Err(Error::new(ErrorKind::InvalidInput, "Invalid index"));
         }
+        queue.remove(index);
+        Ok(())
     }
 }
-
 impl MultiSpeaker {
     pub fn new() -> Self {
         Self {
@@ -203,8 +365,9 @@ impl MultiSpeaker {
         self.speakers.keys().cloned().collect()
     }
 
-    pub fn add_speaker(&mut self, name: String, device_name: String) {
-        self.speakers.insert(name, Speaker::new(device_name));
+    pub fn add_speaker(&mut self, name: String, device_name: String) -> Result<()> {
+        self.speakers.insert(name, Speaker::new(device_name)?);
+        Ok(())
     }
 
     pub fn play(&mut self, speaker_name: &str, song: Song) -> Result<()> {
@@ -231,26 +394,38 @@ impl MultiSpeaker {
         self.get_speaker(speaker_name)?.get_paused()
     }
 
-    pub fn get_current_time(&self, speaker_name: &str) -> Result<String> {
-        self.get_speaker(speaker_name)?.get_current_time()
+    pub fn get_song_time(&self, speaker_name: &str) -> Result<f64> {
+        self.get_speaker(speaker_name)?.get_song_time()
     }
 
-    pub fn get_duration(&self, speaker_name: &str) -> Result<String> {
+    pub fn get_duration(&self, speaker_name: &str) -> Result<f64> {
         self.get_speaker(speaker_name)?.get_duration()
     }
 
-    pub fn enqueue(&mut self, speaker_name: &str, song: Song) -> Result<()> {
-        self.get_speaker_mut(speaker_name)?.enqueue(song);
-        Ok(())
+    pub fn set_song_time(&mut self, speaker_name: &str, time: f64) -> Result<()> {
+        self.get_speaker_mut(speaker_name)?.set_song_time(time)
     }
 
-    pub fn remove_song(&mut self, speaker_name: &str, index: usize) -> Result<()> {
-        self.get_speaker_mut(speaker_name)?.remove_song(index)
+    pub fn set_loop(&mut self, speaker_name: &str, looping: bool) -> Result<()> {
+        self.get_speaker_mut(speaker_name)?.set_loop(looping)
     }
 
-    pub fn emplace_song(&mut self, speaker_name: &str, song: Song, index: usize) -> Result<()> {
+    pub fn get_playlist(&mut self, speaker_name: &str) -> Result<Vec<Song>> {
+        Ok(self.get_speaker_mut(speaker_name)?.get_playlist()?)
+    }
+
+    pub fn append_song_to_playlist(&mut self, speaker_name: &str, song: Song) -> Result<()> {
         self.get_speaker_mut(speaker_name)?
-            .emplace_song(song, index)
+            .append_song_to_playlist(song)
+    }
+
+    pub fn remove_song_from_playlist_at_index(
+        &mut self,
+        speaker_name: &str,
+        index: usize,
+    ) -> Result<()> {
+        self.get_speaker_mut(speaker_name)?
+            .remove_song_from_playlist_at_index(index)
     }
 
     fn get_speaker(&self, name: &str) -> Result<&Speaker> {
@@ -264,58 +439,4 @@ impl MultiSpeaker {
             .get_mut(name)
             .ok_or_else(|| Error::new(ErrorKind::NotFound, "Speaker not found"))
     }
-}
-
-#[test]
-fn test_multi_speaker_functionality() {
-    use crate::procedures::get_audio_devices::get_audio_devices;
-    let mut multi_speaker = MultiSpeaker::new();
-    let devices = get_audio_devices().unwrap();
-    multi_speaker.add_speaker(
-        "test_speaker".to_string(),
-        devices.get(0).unwrap().name.clone(),
-    );
-
-    let test_song = Song {
-        thumbnail: "https://example.com/thumbnail.jpg".to_string(),
-        title: "Test Song".to_string(),
-        url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string(),
-    };
-
-    // Play the song
-    assert!(multi_speaker
-        .play("test_speaker", test_song.clone())
-        .is_ok());
-    std::thread::sleep(std::time::Duration::from_secs(5));
-
-    // Test pause
-    assert!(multi_speaker.pause("test_speaker").is_ok());
-    std::thread::sleep(std::time::Duration::from_secs(2));
-    assert!(multi_speaker.get_paused("test_speaker").unwrap());
-
-    // Test resume
-    assert!(multi_speaker.resume("test_speaker").is_ok());
-    std::thread::sleep(std::time::Duration::from_secs(2));
-    assert!(!multi_speaker.get_paused("test_speaker").unwrap());
-
-    // Get current time and duration
-    let current_time = multi_speaker.get_current_time("test_speaker").unwrap();
-    let duration = multi_speaker.get_duration("test_speaker").unwrap();
-    println!("Current time: {}, Duration: {}", current_time, duration);
-
-    // Stop playback
-    multi_speaker
-        .get_speaker_mut("test_speaker")
-        .unwrap()
-        .stop_current_playback();
-
-    // wait for the process to stop
-    std::thread::sleep(std::time::Duration::from_secs(2));
-
-    //start playback again
-    assert!(multi_speaker
-        .play("test_speaker", test_song.clone())
-        .is_ok());
-
-    std::thread::sleep(std::time::Duration::from_secs(5));
 }

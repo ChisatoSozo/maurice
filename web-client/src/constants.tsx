@@ -1,4 +1,5 @@
 import { AudioPage } from "./pages/AudioPage";
+import { DocumentsPage } from "./pages/DocumentsPage";
 
 import { HomePage } from "./pages/HomePage";
 
@@ -18,5 +19,10 @@ export const pages: Page[] = [
     name: "Audio",
     component: <AudioPage />,
     path: "/audio",
+  },
+  {
+    name: "Documents",
+    component: <DocumentsPage />,
+    path: "/documents",
   },
 ];

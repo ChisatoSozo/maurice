@@ -2,8 +2,14 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AppendSongToPlaylistArgs } from '../models/AppendSongToPlaylistArgs';
+import type { EditFileArgs } from '../models/EditFileArgs';
 import type { GetLoadedModelNameArgs } from '../models/GetLoadedModelNameArgs';
 import type { GetLoadedModelNameReturn } from '../models/GetLoadedModelNameReturn';
+import type { GetPlaylistArgs } from '../models/GetPlaylistArgs';
+import type { GetPlaylistReturn } from '../models/GetPlaylistReturn';
+import type { GetSongTimeArgs } from '../models/GetSongTimeArgs';
+import type { GetSongTimeReturn } from '../models/GetSongTimeReturn';
 import type { GetSpeakersReturn } from '../models/GetSpeakersReturn';
 import type { GetVolumeArgs } from '../models/GetVolumeArgs';
 import type { GetVolumeReturn } from '../models/GetVolumeReturn';
@@ -13,14 +19,46 @@ import type { ListChatModelsArgs } from '../models/ListChatModelsArgs';
 import type { ListChatModelsReturn } from '../models/ListChatModelsReturn';
 import type { LoadModelArgs } from '../models/LoadModelArgs';
 import type { LoadModelReturn } from '../models/LoadModelReturn';
+import type { PauseArgs } from '../models/PauseArgs';
 import type { PlayAudioArgs } from '../models/PlayAudioArgs';
+import type { RemoveSongFromPlaylistAtIndexArgs } from '../models/RemoveSongFromPlaylistAtIndexArgs';
+import type { ResumeArgs } from '../models/ResumeArgs';
 import type { SendChatArgs } from '../models/SendChatArgs';
 import type { SendChatReturn } from '../models/SendChatReturn';
+import type { SetSongTimeArgs } from '../models/SetSongTimeArgs';
 import type { SetVolumeArgs } from '../models/SetVolumeArgs';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class DefaultService {
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiAppendSongToPlaylist(
+        body: AppendSongToPlaylistArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/append_song_to_playlist',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiEditFile(
+        body: EditFileArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/edit_file',
+            body: body,
+        });
+    }
     /**
      * @param body
      * @returns GetLoadedModelNameReturn OK
@@ -32,6 +70,34 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/get_loaded_model_name',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns GetPlaylistReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetPlaylist(
+        body: GetPlaylistArgs,
+    ): CancelablePromise<GetPlaylistReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_playlist',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns GetSongTimeReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetSongTime(
+        body: GetSongTimeArgs,
+    ): CancelablePromise<GetSongTimeReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_song_time',
             body: body,
         });
     }
@@ -106,12 +172,54 @@ export class DefaultService {
      * @returns boolean OK
      * @throws ApiError
      */
+    public static postApiPause(
+        body: PauseArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/pause',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
     public static postApiPlayAudio(
         body: PlayAudioArgs,
     ): CancelablePromise<boolean> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/play_audio',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiRemoveSongFromPlaylistAtIndex(
+        body: RemoveSongFromPlaylistAtIndexArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/remove_song_from_playlist_at_index',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiResume(
+        body: ResumeArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/resume',
             body: body,
         });
     }
@@ -126,6 +234,20 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/send_chat',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiSetSongTime(
+        body: SetSongTimeArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/set_song_time',
             body: body,
         });
     }

@@ -56,7 +56,12 @@ export const analyzeImageColors = async (
         const b = data[i + 2];
         const a = data[i + 3];
 
-        if (a === 0 || (r === 0 && g === 0 && b === 0)) continue;
+        if (
+          a === 0 ||
+          (r < 5 && g < 5 && b < 5) ||
+          (r > 250 && g > 250 && b > 250)
+        )
+          continue;
 
         const key = `${Math.round(r / 10)},${Math.round(g / 10)},${Math.round(
           b / 10

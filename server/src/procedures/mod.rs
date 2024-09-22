@@ -1,6 +1,13 @@
+pub mod append_song_to_playlist;
+pub mod edit_file;
 pub mod get_audio_devices;
+pub mod get_playlist;
 pub mod get_volume;
 pub mod get_youtube_videos;
+pub mod pause;
 pub mod play_audio;
 pub mod refresh_speakers;
+pub mod remove_song_from_playlist_at_index;
+pub mod resume;
+pub mod set_song_time;
 pub mod set_volume;

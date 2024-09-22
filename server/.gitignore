@@ -1,3 +1,5 @@
 /target
 server.log
 server.pid
+static
+files

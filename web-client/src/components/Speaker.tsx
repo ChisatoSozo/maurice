@@ -5,12 +5,40 @@ import { Playlist } from "./Playlist";
 import { Slider } from "@mui/material";
 
 export const Speaker = ({ name }: { name: string }) => {
-  const playSong = async (song: GetYoutubeVideosReturn["videos"][0]) => {
-    await MauriceApi.postApiPlayAudio({
-      song: song,
-      speaker: name,
-    });
-  };
+  const [playlist, setPlaylist] = useState<GetYoutubeVideosReturn["videos"]>(
+    []
+  );
+  const getPlaylist = useCallback(async () => {
+    const songs = (
+      await MauriceApi.postApiGetPlaylist({
+        speaker: name,
+      })
+    ).songs;
+
+    setPlaylist(songs);
+  }, [name]);
+
+  const playSong = useCallback(
+    async (song: GetYoutubeVideosReturn["videos"][0]) => {
+      await MauriceApi.postApiPlayAudio({
+        song: song,
+        speaker: name,
+      });
+      getPlaylist();
+    },
+    [getPlaylist, name]
+  );
+
+  const addSong = useCallback(
+    async (song: GetYoutubeVideosReturn["videos"][0]) => {
+      await MauriceApi.postApiAppendSongToPlaylist({
+        song: song,
+        speaker: name,
+      });
+      getPlaylist();
+    },
+    [getPlaylist, name]
+  );
 
   const setVolumeServer = useCallback(
     async (volume: number) => {
@@ -29,16 +57,18 @@ export const Speaker = ({ name }: { name: string }) => {
     return volume;
   }, [name]);
 
+  const remove = useCallback(
+    async (index: number) => {
+      await MauriceApi.postApiRemoveSongFromPlaylistAtIndex({
+        speaker: name,
+        index,
+      });
+      getPlaylist();
+    },
+    [getPlaylist, name]
+  );
+
   const [volume, setVolume] = useState<number | null>(null);
-
-  useEffect(() => {
-    const fetchVolume = async () => {
-      const volume = await getVolumeServer();
-      setVolume(volume.volume);
-    };
-
-    fetchVolume();
-  }, [getVolumeServer]);
 
   useEffect(() => {
     const fetchSetVolume = async () => {
@@ -49,6 +79,23 @@ export const Speaker = ({ name }: { name: string }) => {
     };
     fetchSetVolume();
   }, [volume, setVolumeServer]);
+
+  useEffect(() => {
+    //occasionally fetch volume and playlist
+    const fetchStuff = async () => {
+      const fetchVolume = async () => {
+        const volume = await getVolumeServer();
+        setVolume(volume.volume);
+      };
+      getPlaylist();
+      fetchVolume();
+    };
+    fetchStuff();
+    const interval = setInterval(() => {
+      fetchStuff();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [getVolumeServer, getPlaylist]);
 
   return (
     <>
@@ -64,8 +111,12 @@ export const Speaker = ({ name }: { name: string }) => {
           }}
         />
       )}
-      <Playlist />
-      <GetYoutubeVideo onPlayVideo={playSong} />
+      <Playlist speaker={name} playlist={playlist} remove={remove} />
+      <GetYoutubeVideo
+        onPlayVideo={playSong}
+        onAddVideo={addSong}
+        speaker={name}
+      />
     </>
   );
 };

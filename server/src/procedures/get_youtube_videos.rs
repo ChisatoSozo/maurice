@@ -40,7 +40,6 @@ pub async fn get_youtube_videos(search: String) -> Result<Vec<Song>, Box<dyn Err
 
             Some((id.to_string(), title.to_string()))
         })
-        .take(5)
         .collect::<Vec<_>>();
 
     // Fetch thumbnails and create Song structs

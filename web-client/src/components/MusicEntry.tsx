@@ -1,20 +1,19 @@
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Typography, useMediaQuery } from "@mui/material";
 import { GetYoutubeVideosReturn } from "../api";
 import { analyzeImageColors, ColorAnalysis } from "../utils/util";
 import { useEffect, useState } from "react";
-import AddIcon from "@mui/icons-material/Add";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import { SongTime } from "./SongTime";
 
 export const MusicEntry = ({
   video,
-  hideControls,
-  onPlay,
-  onAdd,
+  controls,
+  speaker,
+  showTime,
 }: {
   video: GetYoutubeVideosReturn["videos"][0];
-  hideControls?: boolean;
-  onPlay?: () => void;
-  onAdd?: () => void;
+  controls: (textColor: string) => React.ReactNode;
+  speaker: string;
+  showTime?: boolean;
 }) => {
   const [color, setColor] = useState<ColorAnalysis | null>(null);
 
@@ -22,79 +21,103 @@ export const MusicEntry = ({
     analyzeImageColors(video.thumbnail).then(setColor);
   }, [video.thumbnail]);
 
+  const small = useMediaQuery("(max-width: 600px)");
+
+  if (small) {
+    return (
+      <Box
+        display={"flex"}
+        flexDirection={"column"}
+        style={{
+          height: showTime ? 220 : 160,
+          borderRadius: 10,
+          overflow: "hidden",
+          backgroundColor: color?.dominant.rgb || "white",
+        }}
+      >
+        <Box
+          style={{
+            display: "flex",
+            flex: 1,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <img
+            src={video.thumbnail}
+            width={178}
+            height={100}
+            style={{
+              objectFit: "cover",
+            }}
+          />
+          <Box flex={1} height="100%">
+            <Typography
+              padding={1}
+              color={color?.suggestedTextColor.rgb || "black"}
+              height={80}
+            >
+              {video.title}
+            </Typography>
+          </Box>
+        </Box>
+        <Box
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            width: 178,
+          }}
+        >
+          {controls(color?.suggestedTextColor.rgb || "black")}
+        </Box>
+        <SongTime speaker={speaker} />
+      </Box>
+    );
+  }
+
   return (
     <Box
+      display={"flex"}
+      flexDirection={"column"}
       style={{
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        height: 100,
+        height: showTime ? 160 : 100,
         borderRadius: 10,
         overflow: "hidden",
         backgroundColor: color?.dominant.rgb || "white",
       }}
     >
-      <img
-        src={video.thumbnail}
-        width={178}
-        height={100}
+      <Box
         style={{
-          objectFit: "cover",
+          display: "flex",
+          flex: 1,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
-      />
-      <Box flex={1} height="100%">
-        <Typography
-          padding={1}
-          color={color?.suggestedTextColor.rgb || "black"}
-        >
-          {video.title}
-        </Typography>
-      </Box>
-      {!hideControls && (
-        <>
-          <Box>
-            <Button
-              style={{
-                height: 60,
-                width: 60,
-                color: color?.suggestedTextColor.rgb || "black",
-              }}
-              onClick={onPlay}
-            >
-              <PlayArrowIcon
-                style={{
-                  fontSize: 40,
-                  marginTop: 23,
-                  marginLeft: 24,
-                }}
-              />
-            </Button>
-          </Box>
-          <Box
-            style={{
-              marginRight: 10,
-            }}
+      >
+        <img
+          src={video.thumbnail}
+          width={178}
+          height={100}
+          style={{
+            objectFit: "cover",
+          }}
+        />
+        <Box flex={1} height="100%">
+          <Typography
+            padding={1}
+            color={color?.suggestedTextColor.rgb || "black"}
           >
-            <Button
-              style={{
-                height: 60,
-                width: 60,
-                color: color?.suggestedTextColor.rgb || "black",
-              }}
-              onClick={onAdd}
-            >
-              <AddIcon
-                style={{
-                  fontSize: 40,
-                  marginTop: 23,
-                  marginLeft: 24,
-                }}
-              />
-            </Button>
-          </Box>
-        </>
-      )}
+            {video.title}
+          </Typography>
+        </Box>
+
+        {controls(color?.suggestedTextColor.rgb || "black")}
+      </Box>
+      {showTime && <SongTime speaker={speaker} />}
     </Box>
   );
 };

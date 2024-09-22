@@ -10,8 +10,12 @@ use function_types::python_functions::Python;
 use logger::init_logger;
 use paperclip::actix::OpenApiExt;
 use routes::{
-    get_speakers::get_speakers, get_volume::get_volume, get_youtube_videos::get_youtube_videos,
-    play_audio::play_audio, set_volume::set_volume,
+    append_song_to_playlist::append_song_to_playlist, edit_file::edit_file,
+    get_playlist::get_playlist, get_song_time::get_song_time, get_speakers::get_speakers,
+    get_volume::get_volume, get_youtube_videos::get_youtube_videos, is_locked::is_locked,
+    pause::pause, play_audio::play_audio,
+    remove_song_from_playlist_at_index::remove_song_from_playlist_at_index, resume::resume,
+    set_song_time::set_song_time, set_volume::set_volume,
 };
 use types::speaker::MultiSpeaker;
 
@@ -64,6 +68,7 @@ async fn main() -> std::io::Result<()> {
                     .allowed_header(header::CONTENT_TYPE)
                     .max_age(3600),
             )
+            .service(actix_files::Files::new("/files", "./files"))
             .wrap_api()
             .with_json_spec_at(JSON_SPEC_PATH)
             .add_function_routes()
@@ -72,6 +77,15 @@ async fn main() -> std::io::Result<()> {
             .service(play_audio)
             .service(get_volume)
             .service(set_volume)
+            .service(remove_song_from_playlist_at_index)
+            .service(get_playlist)
+            .service(append_song_to_playlist)
+            .service(pause)
+            .service(resume)
+            .service(edit_file)
+            .service(is_locked)
+            .service(get_song_time)
+            .service(set_song_time)
             .build()
     })
     .workers(4)
