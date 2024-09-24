@@ -23,8 +23,8 @@ pub fn is_locked(file_path: &str, requestor_ip: &str) -> Result<(bool, bool), Bo
         .with_timezone(&Local);
     let current_time = Local::now();
 
-    if current_time.signed_duration_since(locked_datetime) > Duration::minutes(5) {
-        // Lock is older than 5 minutes, delete it
+    if current_time.signed_duration_since(locked_datetime) > Duration::seconds(10) {
+        // Lock is older than 10 seconds, delete it
         fs::remove_file(lock_file_path)?;
         Ok((false, false))
     } else {

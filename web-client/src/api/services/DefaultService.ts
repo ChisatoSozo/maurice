@@ -3,6 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AppendSongToPlaylistArgs } from '../models/AppendSongToPlaylistArgs';
+import type { CreateDirectoryArgs } from '../models/CreateDirectoryArgs';
+import type { CreateFileArgs } from '../models/CreateFileArgs';
+import type { DeleteFileArgs } from '../models/DeleteFileArgs';
+import type { DeleteFolderArgs } from '../models/DeleteFolderArgs';
 import type { EditFileArgs } from '../models/EditFileArgs';
 import type { GetLoadedModelNameArgs } from '../models/GetLoadedModelNameArgs';
 import type { GetLoadedModelNameReturn } from '../models/GetLoadedModelNameReturn';
@@ -15,8 +19,12 @@ import type { GetVolumeArgs } from '../models/GetVolumeArgs';
 import type { GetVolumeReturn } from '../models/GetVolumeReturn';
 import type { GetYoutubeVideosArgs } from '../models/GetYoutubeVideosArgs';
 import type { GetYoutubeVideosReturn } from '../models/GetYoutubeVideosReturn';
+import type { IsLockedArgs } from '../models/IsLockedArgs';
+import type { IsLockedResponse } from '../models/IsLockedResponse';
 import type { ListChatModelsArgs } from '../models/ListChatModelsArgs';
 import type { ListChatModelsReturn } from '../models/ListChatModelsReturn';
+import type { ListFilesAndDirectoriesArgs } from '../models/ListFilesAndDirectoriesArgs';
+import type { ListFilesAndDirectoriesResponse } from '../models/ListFilesAndDirectoriesResponse';
 import type { LoadModelArgs } from '../models/LoadModelArgs';
 import type { LoadModelReturn } from '../models/LoadModelReturn';
 import type { PauseArgs } from '../models/PauseArgs';
@@ -42,6 +50,62 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/append_song_to_playlist',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiCreateDirectory(
+        body: CreateDirectoryArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/create_directory',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiCreateFile(
+        body: CreateFileArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/create_file',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiDeleteFile(
+        body: DeleteFileArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/delete_file',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiDeleteFolder(
+        body: DeleteFolderArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/delete_folder',
             body: body,
         });
     }
@@ -141,6 +205,20 @@ export class DefaultService {
     }
     /**
      * @param body
+     * @returns IsLockedResponse OK
+     * @throws ApiError
+     */
+    public static postApiIsLocked(
+        body: IsLockedArgs,
+    ): CancelablePromise<IsLockedResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/is_locked',
+            body: body,
+        });
+    }
+    /**
+     * @param body
      * @returns ListChatModelsReturn OK
      * @throws ApiError
      */
@@ -150,6 +228,20 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/list_chat_models',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns ListFilesAndDirectoriesResponse OK
+     * @throws ApiError
+     */
+    public static postApiListFilesAndDirectories(
+        body: ListFilesAndDirectoriesArgs,
+    ): CancelablePromise<ListFilesAndDirectoriesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/list_files_and_directories',
             body: body,
         });
     }

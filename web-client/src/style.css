@@ -3,7 +3,26 @@ body {
   margin: 0;
 }
 
-@keyframes foo {
+.editor {
+  height: 80%;
+  width: 100%;
+
+  > div {
+    height: 100%;
+    width: 100%;
+    > div {
+      height: 100%;
+      width: 100%;
+      > p {
+        height: 100%;
+        width: 100%;
+
+      }
+    }
+  }
+}
+
+/* @keyframes foo {
   from {
     transform: translate(0 25px) rotate(-30deg);
   }
@@ -176,4 +195,4 @@ button::before {
 }
 .yes {
   animation: yes 0.5s infinite;
-}
+} */

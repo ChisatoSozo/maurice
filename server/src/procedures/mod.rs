@@ -4,6 +4,12 @@ pub mod get_audio_devices;
 pub mod get_playlist;
 pub mod get_volume;
 pub mod get_youtube_videos;
+
+pub mod create_directory;
+pub mod create_file;
+pub mod delete_file;
+pub mod delete_folder;
+pub mod list_files_and_directories;
 pub mod pause;
 pub mod play_audio;
 pub mod refresh_speakers;

@@ -70,13 +70,7 @@ export const GetYoutubeVideo = ({
                   }}
                   onClick={() => onAddVideo?.(video)}
                 >
-                  <Add
-                    style={{
-                      fontSize: 40,
-                      marginTop: 23,
-                      marginLeft: 24,
-                    }}
-                  />
+                  <Add />
                 </Button>
               </Box>
               <Box>
@@ -88,13 +82,7 @@ export const GetYoutubeVideo = ({
                   }}
                   onClick={() => onPlayVideo?.(video)}
                 >
-                  <PlayArrow
-                    style={{
-                      fontSize: 40,
-                      marginTop: 23,
-                      marginLeft: 24,
-                    }}
-                  />
+                  <PlayArrow />
                 </Button>
               </Box>
             </>

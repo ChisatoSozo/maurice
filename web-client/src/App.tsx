@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { pages } from "./constants";
 import { Box, Button, Typography } from "@mui/material";
+import { EditPage } from "./pages/EditPage";
 
 const NavBar = () => {
   const location = useLocation();
@@ -66,6 +67,11 @@ export const App = () => {
                 element={page.component}
               />
             ))}
+            <Route
+              //route for editing files, /edit/:path (:path can have slashes)
+              path="/edit/*"
+              element={<EditPage />}
+            />
           </Routes>
         </Box>
       </Box>

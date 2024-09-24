@@ -2,7 +2,7 @@
 use std::sync::{Arc, Mutex};
 
 use actix_cors::Cors;
-use actix_web::{http::header, middleware::Logger, web::Data, App, HttpServer};
+use actix_web::{http::header, web::Data, App, HttpServer};
 
 use diesel::{Connection, PgConnection};
 use function_routes::add_function_routes::AddFunctionRoutes;
@@ -10,12 +10,13 @@ use function_types::python_functions::Python;
 use logger::init_logger;
 use paperclip::actix::OpenApiExt;
 use routes::{
-    append_song_to_playlist::append_song_to_playlist, edit_file::edit_file,
-    get_playlist::get_playlist, get_song_time::get_song_time, get_speakers::get_speakers,
-    get_volume::get_volume, get_youtube_videos::get_youtube_videos, is_locked::is_locked,
-    pause::pause, play_audio::play_audio,
-    remove_song_from_playlist_at_index::remove_song_from_playlist_at_index, resume::resume,
-    set_song_time::set_song_time, set_volume::set_volume,
+    append_song_to_playlist::append_song_to_playlist, create_directory::create_directory,
+    create_file::create_file, delete_file::delete_file, delete_folder::delete_folder,
+    edit_file::edit_file, get_playlist::get_playlist, get_song_time::get_song_time,
+    get_speakers::get_speakers, get_volume::get_volume, get_youtube_videos::get_youtube_videos,
+    is_locked::is_locked, list_files_and_directories::list_files_and_directories, pause::pause,
+    play_audio::play_audio, remove_song_from_playlist_at_index::remove_song_from_playlist_at_index,
+    resume::resume, set_song_time::set_song_time, set_volume::set_volume,
 };
 use types::speaker::MultiSpeaker;
 
@@ -58,8 +59,6 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(global_state)
-            .wrap(Logger::default())
-            .wrap(Logger::new("%a %{User-Agent}i"))
             .wrap(
                 Cors::default()
                     .allow_any_origin()
@@ -86,6 +85,11 @@ async fn main() -> std::io::Result<()> {
             .service(is_locked)
             .service(get_song_time)
             .service(set_song_time)
+            .service(list_files_and_directories)
+            .service(create_file)
+            .service(delete_file)
+            .service(delete_folder)
+            .service(create_directory)
             .build()
     })
     .workers(4)

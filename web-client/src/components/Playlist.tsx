@@ -54,13 +54,7 @@ export const Playlist = ({
                   }}
                   onClick={pause}
                 >
-                  <Pause
-                    style={{
-                      fontSize: 40,
-                      marginTop: 23,
-                      marginLeft: 24,
-                    }}
-                  />
+                  <Pause />
                 </Button>
               </Box>
               <Box>
@@ -72,13 +66,7 @@ export const Playlist = ({
                   }}
                   onClick={resume}
                 >
-                  <PlayArrow
-                    style={{
-                      fontSize: 40,
-                      marginTop: 23,
-                      marginLeft: 24,
-                    }}
-                  />
+                  <PlayArrow />
                 </Button>
               </Box>
             </>
@@ -93,13 +81,7 @@ export const Playlist = ({
                 }}
                 onClick={() => remove(i)}
               >
-                <Delete
-                  style={{
-                    fontSize: 40,
-                    marginTop: 23,
-                    marginLeft: 24,
-                  }}
-                />
+                <Delete />
               </Button>
             </Box>
           )}
