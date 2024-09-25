@@ -7,7 +7,7 @@ use log::error;
 use paperclip::actix::{api_v2_operation, post, Apiv2Schema};
 use serde::Deserialize;
 
-use crate::{procedures, types::speaker::Song, GlobalState};
+use crate::{procedures, types::mpv_handler::Song, GlobalState};
 
 #[derive(Debug, Deserialize, Apiv2Schema)]
 struct PlayAudioArgs {

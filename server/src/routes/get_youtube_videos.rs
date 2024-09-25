@@ -3,7 +3,7 @@ use actix_web::{web::Json, Error};
 use paperclip::actix::{api_v2_operation, post, Apiv2Schema};
 use serde::{Deserialize, Serialize};
 
-use crate::{procedures, types::speaker::Song};
+use crate::{procedures, types::mpv_handler::Song};
 
 #[derive(Debug, Deserialize, Apiv2Schema)]
 struct GetYoutubeVideosArgs {

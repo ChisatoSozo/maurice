@@ -1,5 +1,5 @@
 #![allow(non_camel_case_types)]
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 
 use actix_cors::Cors;
 use actix_web::{http::header, web::Data, App, HttpServer};
@@ -18,7 +18,7 @@ use routes::{
     play_audio::play_audio, remove_song_from_playlist_at_index::remove_song_from_playlist_at_index,
     resume::resume, set_song_time::set_song_time, set_volume::set_volume,
 };
-use types::speaker::MultiSpeaker;
+use types::mpv_handler::{MpvHandler, MpvHandlerMessage, MpvHandlerResponse};
 
 pub mod function_routes;
 pub mod function_types;
@@ -32,7 +32,8 @@ pub mod types;
 const JSON_SPEC_PATH: &str = "/api/spec/v2.json";
 
 struct GlobalState {
-    speakers: Arc<Mutex<MultiSpeaker>>,
+    speakers_args_sender: mpsc::Sender<MpvHandlerMessage>,
+    speakers_result_receiver: mpsc::Receiver<MpvHandlerResponse>,
     python: Python,
     db: Arc<Mutex<PgConnection>>,
 }
@@ -43,7 +44,10 @@ async fn main() -> std::io::Result<()> {
 
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     init_logger();
-    let speakers = Arc::new(Mutex::new(MultiSpeaker::new()));
+
+    let (args_sender, args_receiver) = mpsc::channel();
+    let (result_sender, result_receiver) = mpsc::channel();
+    let speakers = MpvHandler::new(args_receiver, result_sender).unwrap();
 
     HttpServer::new(move || {
         let database_url = "postgres:///maurice";
@@ -52,7 +56,8 @@ async fn main() -> std::io::Result<()> {
             .expect(&format!("Error connecting to {}", database_url));
 
         let global_state = Data::new(GlobalState {
-            speakers: speakers.clone(),
+            speakers_args_sender: args_sender.clone(),
+            speakers_result_receiver: result_receiver.clone(),
             python: Python::new().unwrap(),
             db: Arc::new(Mutex::new(db)),
         });
