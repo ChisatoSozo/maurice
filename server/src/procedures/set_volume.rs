@@ -1,11 +1,7 @@
 use std::error::Error;
 
-use crate::types::speaker::MultiSpeaker;
+use crate::types::mpv_handler::{MpvRequest, MpvSend};
 
-pub fn set_volume(
-    speakers: &mut MultiSpeaker,
-    speaker_name: &str,
-    volume: f64,
-) -> Result<(), Box<dyn Error>> {
-    Ok(speakers.set_volume(speaker_name, volume)?)
+pub async fn set_volume(send: &MpvSend, speaker: &str, volume: f64) -> Result<(), Box<dyn Error>> {
+    send.set_volume(speaker, volume).await
 }

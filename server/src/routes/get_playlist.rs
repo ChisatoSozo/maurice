@@ -3,11 +3,10 @@ use actix_web::{
     Error,
 };
 
-use log::error;
 use paperclip::actix::{api_v2_operation, post, Apiv2Schema};
 use serde::{Deserialize, Serialize};
 
-use crate::{procedures::refresh_speakers::refresh_speakers, types::speaker::Song, GlobalState};
+use crate::{procedures, types::mpv_handler::Song, GlobalState};
 
 #[derive(Debug, Deserialize, Apiv2Schema)]
 struct GetPlaylistArgs {
@@ -25,18 +24,11 @@ pub fn get_playlist(
     gs: Data<GlobalState>,
     body: Json<GetPlaylistArgs>,
 ) -> Result<Json<GetPlaylistReturn>, Error> {
-    let speakers = gs.speakers.clone();
-    let mut speakers_lock = speakers.lock().map_err(|e| {
-        error!("Error getting speakers_lock: {}", e);
-        actix_web::error::ErrorInternalServerError(format!("Error getting speakers_lock: {}", e))
-    })?;
+    let send = &gs.mpv_send;
 
-    refresh_speakers(&mut speakers_lock).expect("Failed to refresh speakers");
+    procedures::refresh_speakers::refresh_speakers(send).await?;
 
-    let songs = speakers_lock.get_playlist(&body.speaker).map_err(|e| {
-        error!("Error getting songs: {}", e);
-        actix_web::error::ErrorInternalServerError(format!("Error getting songs: {}", e))
-    })?;
+    let songs = procedures::get_playlist::get_playlist(send, &body.speaker).await?;
 
     Ok(Json(GetPlaylistReturn { songs }))
 }

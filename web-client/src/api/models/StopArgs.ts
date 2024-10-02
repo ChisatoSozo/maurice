@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type ListFilesAndDirectoriesArgs = {
-    path: string;
+export type StopArgs = {
+    speaker: string;
 };
 

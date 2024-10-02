@@ -1,11 +1,11 @@
 use std::error::Error;
 
-use crate::types::speaker::MultiSpeaker;
+use crate::types::mpv_handler::{MpvRequest, MpvSend};
 
-pub fn remove_song_from_playlist_at_index(
-    speakers: &mut MultiSpeaker,
-    speaker_name: &str,
+pub async fn remove_song_from_playlist_at_index(
+    send: &MpvSend,
+    speaker: &str,
     index: usize,
 ) -> Result<(), Box<dyn Error>> {
-    Ok(speakers.remove_song_from_playlist_at_index(speaker_name, index)?)
+    send.remove_song(speaker, index).await
 }

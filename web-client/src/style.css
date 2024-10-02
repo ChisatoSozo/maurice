@@ -3,23 +3,9 @@ body {
   margin: 0;
 }
 
-.editor {
-  height: 80%;
-  width: 100%;
-
-  > div {
-    height: 100%;
-    width: 100%;
-    > div {
-      height: 100%;
-      width: 100%;
-      > p {
-        height: 100%;
-        width: 100%;
-
-      }
-    }
-  }
+.mdxeditor [role="textbox"] {
+  border: 1px solid #e1e4e8;
+  border-top: none;
 }
 
 /* @keyframes foo {

@@ -3,7 +3,6 @@ use actix_web::{
     Error,
 };
 
-use log::error;
 use paperclip::actix::{api_v2_operation, post, Apiv2Schema};
 use serde::Deserialize;
 
@@ -18,14 +17,9 @@ struct PlayAudioArgs {
 #[api_v2_operation]
 #[post("/api/play_audio")]
 pub fn play_audio(gs: Data<GlobalState>, body: Json<PlayAudioArgs>) -> Result<Json<bool>, Error> {
-    let speakers = gs.speakers.clone();
-    let mut speakers_lock = speakers.lock().map_err(|e| {
-        error!("Error getting speakers_lock: {}", e);
-        actix_web::error::ErrorInternalServerError(format!("Error getting speakers_lock: {}", e))
-    })?;
+    let send = &gs.mpv_send;
 
-    procedures::play_audio::play_audio(&mut speakers_lock, &body.speaker, body.song.clone())
-        .map_err(|e| actix_web::error::ErrorInternalServerError(e.to_string()))?;
+    procedures::play_audio::play_audio(send, &body.speaker, body.song.clone()).await?;
 
     Ok(Json(true))
 }

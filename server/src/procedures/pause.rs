@@ -1,7 +1,7 @@
 use std::error::Error;
 
-use crate::types::speaker::MultiSpeaker;
+use crate::types::mpv_handler::{MpvRequest, MpvSend};
 
-pub fn pause(speakers: &mut MultiSpeaker, speaker_name: &str) -> Result<(), Box<dyn Error>> {
-    Ok(speakers.pause(speaker_name)?)
+pub async fn pause(send: &MpvSend, speaker: &str) -> Result<(), Box<dyn Error>> {
+    send.pause(speaker).await
 }

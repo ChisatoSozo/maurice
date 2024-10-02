@@ -1,10 +1,7 @@
 use std::error::Error;
 
-use crate::types::speaker::{MultiSpeaker, Song};
+use crate::types::mpv_handler::{MpvRequest, MpvSend, Song};
 
-pub fn get_playlist(
-    speakers: &mut MultiSpeaker,
-    speaker_name: &str,
-) -> Result<Vec<Song>, Box<dyn Error>> {
-    Ok(speakers.get_playlist(speaker_name)?)
+pub async fn get_playlist(send: &MpvSend, speaker: &str) -> Result<Vec<Song>, Box<dyn Error>> {
+    send.list_playlist(speaker).await
 }

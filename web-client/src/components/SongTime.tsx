@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MauriceApi } from "../api";
+import { GetYoutubeVideosReturn, MauriceApi } from "../api";
 import { Box, Slider, Typography } from "@mui/material";
 
-export const SongTime = ({ speaker }: { speaker: string }) => {
+export const SongTime = ({
+  speaker,
+  song,
+  color,
+}: {
+  speaker: string;
+  song: GetYoutubeVideosReturn["videos"][0];
+  color: string;
+}) => {
   const [time, setTime] = useState(0);
   const [maxTime, setMaxTime] = useState(0);
   const settingTime = useRef(false);
@@ -15,37 +23,39 @@ export const SongTime = ({ speaker }: { speaker: string }) => {
       if (settingTime.current) {
         return;
       }
-      setTime(
-        song_time.song_time < song_time.song_duration
-          ? song_time.song_time
-          : song_time.song_duration
-      );
-      setMaxTime(
-        song_time.song_duration > song_time.song_time
-          ? song_time.song_duration
-          : song_time.song_time
-      );
+      setTime(song_time.time);
     }, 500);
     return () => clearInterval(interval);
   }, [speaker]);
 
+  useEffect(() => {
+    const fetchMaxTime = async () => {
+      const song_time = await MauriceApi.postApiGetSongDuration({
+        speaker,
+      });
+      setMaxTime(song_time.duration);
+    };
+    fetchMaxTime();
+  }, [speaker, song]);
+
   const updateTime = useCallback(
-    async (time: number) => {
-      setTime(time);
+    async (newTime: number) => {
+      setTime(newTime);
       settingTime.current = true;
+      const timeDelta = newTime - time;
       await MauriceApi.postApiSetSongTime({
         speaker,
-        song_time: time,
+        song_time: timeDelta,
       });
       settingTime.current = false;
     },
-    [setTime, speaker]
+    [speaker, time]
   );
 
   //00:00, 03:00, 03:30, etc
   const formattedTime = useMemo(() => {
     const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
+    const seconds = time - minutes * 60;
 
     return `${minutes.toFixed(0)}:${seconds < 10 ? "0" : ""}${seconds.toFixed(
       0
@@ -54,7 +64,7 @@ export const SongTime = ({ speaker }: { speaker: string }) => {
 
   const formattedMaxTime = useMemo(() => {
     const minutes = Math.floor(maxTime / 60);
-    const seconds = maxTime % 60;
+    const seconds = maxTime - minutes * 60;
 
     return `${minutes.toFixed(0)}:${seconds < 10 ? "0" : ""}${seconds.toFixed(
       0
@@ -83,6 +93,7 @@ export const SongTime = ({ speaker }: { speaker: string }) => {
         style={{
           width: 60,
           textAlign: "left",
+          color: color,
         }}
       >
         {formattedTime}/{formattedMaxTime}

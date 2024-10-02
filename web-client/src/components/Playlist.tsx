@@ -1,8 +1,7 @@
 import { GetPlaylistReturn, MauriceApi } from "../api";
 import { MusicEntry } from "./MusicEntry";
 import { Box, Button } from "@mui/material";
-import { Delete, Pause, PlayArrow } from "@mui/icons-material";
-import { useEffect } from "react";
+import { Delete, Pause, PlayArrow, Stop } from "@mui/icons-material";
 
 export const Playlist = ({
   speaker,
@@ -25,15 +24,17 @@ export const Playlist = ({
     });
   };
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const time = await MauriceApi.postApiGetSongTime({
-        speaker,
-      });
-      console.log(time.song_time);
-    }, 500);
-    return () => clearInterval(interval);
-  }, [speaker]);
+  const stop = async () => {
+    MauriceApi.postApiStop({
+      speaker,
+    });
+  };
+
+  // const next = async () => {
+  //   MauriceApi.postApiStop({
+  //     speaker,
+  //   });
+  // };
 
   return playlist.map((song, i) => (
     <MusicEntry
@@ -45,6 +46,20 @@ export const Playlist = ({
         <>
           {i === 0 && (
             <>
+              {playlist.length == 1 && (
+                <Box>
+                  <Button
+                    style={{
+                      height: 60,
+                      width: 60,
+                      color,
+                    }}
+                    onClick={stop}
+                  >
+                    <Stop />
+                  </Button>
+                </Box>
+              )}
               <Box>
                 <Button
                   style={{
@@ -69,6 +84,20 @@ export const Playlist = ({
                   <PlayArrow />
                 </Button>
               </Box>
+              {/* {playlist.length > 1 && (
+                <Box>
+                  <Button
+                    style={{
+                      height: 60,
+                      width: 60,
+                      color,
+                    }}
+                    onClick={next}
+                  >
+                    <SkipNext />
+                  </Button>
+                </Box>
+              )} */}
             </>
           )}
           {i !== 0 && (

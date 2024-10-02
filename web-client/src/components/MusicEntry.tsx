@@ -73,7 +73,13 @@ export const MusicEntry = ({
         >
           {controls(color?.suggestedTextColor.rgb || "black")}
         </Box>
-        <SongTime speaker={speaker} />
+        {showTime && (
+          <SongTime
+            speaker={speaker}
+            song={video}
+            color={color?.suggestedTextColor.rgb || "black"}
+          />
+        )}
       </Box>
     );
   }
@@ -117,7 +123,13 @@ export const MusicEntry = ({
 
         {controls(color?.suggestedTextColor.rgb || "black")}
       </Box>
-      {showTime && <SongTime speaker={speaker} />}
+      {showTime && (
+        <SongTime
+          speaker={speaker}
+          song={video}
+          color={color?.suggestedTextColor.rgb || "black"}
+        />
+      )}
     </Box>
   );
 };

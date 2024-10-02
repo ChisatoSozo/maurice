@@ -4,7 +4,12 @@ use std::{
     io::{BufRead, BufReader, Write},
     os::unix::net::UnixStream,
     process::Child,
-    sync::mpsc,
+    sync::{
+        mpsc::{self, Sender},
+        Arc, Mutex,
+    },
+    thread::sleep,
+    time::{Duration, Instant},
 };
 
 use libpulse_binding::volume::{ChannelVolumes, Volume};
@@ -13,6 +18,7 @@ use paperclip::actix::Apiv2Schema;
 use pulsectl::controllers::{DeviceControl, SinkController};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Apiv2Schema, PartialEq)]
 pub struct Song {
@@ -33,17 +39,27 @@ pub enum MpvHandlerMessage {
     Remove(String, usize),
     Clear(String),
     List(String),
-    TimeAndDuration(String),
+    Time(String),
+    Duration(String),
     AddDevice(String),
     RemoveDevice(String),
+    ListDevices(),
 }
 
+pub struct ReqWrapper<Req, Resp> {
+    pub req: Req,
+    pub tx: std::sync::mpsc::Sender<Resp>,
+}
+
+#[derive(Debug)]
 pub enum MpvHandlerResponse {
     Ok,
     Error(String),
     List(Vec<Song>),
     Volume(f64),
-    TimeAndDuration(f64, f64),
+    Time(f64),
+    Duration(f64),
+    Devices(Vec<String>),
 }
 
 pub struct MpvHandlerState {
@@ -66,9 +82,9 @@ impl MpvHandlerState {
 
 pub struct MpvHandler {
     state: HashMap<String, MpvHandlerState>,
-    consumer: mpsc::Receiver<MpvHandlerMessage>,
-    producer: mpsc::Sender<MpvHandlerResponse>,
+    consumer: mpsc::Receiver<ReqWrapper<MpvHandlerMessage, MpvHandlerResponse>>,
     pulse_controller: SinkController,
+    in_progress: bool,
 }
 
 fn send_command(
@@ -76,54 +92,76 @@ fn send_command(
     command: &str,
     property: &str,
     value: &str,
-) -> Result<(), String> {
-    let command = json!({"command": [command, property, value]});
+) -> Result<Value, String> {
+    //random int32 as request_id
+    let rand_int: i32 = rand::random();
+    let request_id = rand_int;
+    let command = json!({
+        "command": [command, property, value],
+        "request_id": request_id
+    });
     writeln!(stream, "{}", command.to_string()).map_err(|e| e.to_string())?;
     stream.flush().map_err(|e| e.to_string())?;
-    BufReader::new(stream).lines().next(); // Read and discard response
-    Ok(())
+
+    read_response_with_id(stream, &request_id)
 }
 
 fn send_command_single_arg(
     stream: &mut UnixStream,
     command: &str,
     arg: &str,
-) -> Result<(), String> {
-    let command = json!({"command": [command, arg]});
+) -> Result<Value, String> {
+    let rand_int: i32 = rand::random();
+    let request_id = rand_int;
+    let command = json!({
+        "command": [command, arg],
+        "request_id": request_id
+    });
     writeln!(stream, "{}", command.to_string()).map_err(|e| e.to_string())?;
     stream.flush().map_err(|e| e.to_string())?;
-    BufReader::new(stream).lines().next(); // Read and discard response
-    Ok(())
+
+    read_response_with_id(stream, &request_id)
 }
 
 fn get_property(stream: &mut UnixStream, property: &str) -> Result<Value, String> {
-    let command = json!({"command": ["get_property", property]});
+    let rand_int: i32 = rand::random();
+    let request_id = rand_int;
+    let command = json!({
+        "command": ["get_property", property],
+        "request_id": request_id
+    });
     writeln!(stream, "{}", command.to_string()).map_err(|e| e.to_string())?;
     stream.flush().map_err(|e| e.to_string())?;
-    let response = BufReader::new(stream)
-        .lines()
-        .next()
-        .ok_or("no line")
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
-    let parsed: Value = serde_json::from_str(&response).map_err(|e| e.to_string())?;
-    Ok(parsed["data"].clone())
+
+    let response = read_response_with_id(stream, &request_id)?;
+    Ok(response["data"].clone())
+}
+
+fn read_response_with_id(stream: &mut UnixStream, request_id: &i32) -> Result<Value, String> {
+    let reader = BufReader::new(stream);
+    for line in reader.lines() {
+        let line = line.map_err(|e| e.to_string())?;
+        let parsed: Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        if parsed["request_id"] == *request_id {
+            return Ok(parsed);
+        }
+    }
+    Err("Response with matching request_id not found".to_string())
 }
 
 impl MpvHandler {
     pub fn new(
-        consumer: mpsc::Receiver<MpvHandlerMessage>,
-        producer: mpsc::Sender<MpvHandlerResponse>,
+        consumer: mpsc::Receiver<ReqWrapper<MpvHandlerMessage, MpvHandlerResponse>>,
     ) -> Result<Self, String> {
         Ok(Self {
             state: HashMap::new(),
             consumer,
-            producer,
             pulse_controller: SinkController::create().map_err(|e| e.to_string())?,
+            in_progress: false,
         })
     }
 
-    fn run(&mut self) {
+    pub fn run(&mut self) {
         loop {
             let message = self.consumer.recv().map_err(|e| e.to_string());
             let message = match message {
@@ -133,8 +171,23 @@ impl MpvHandler {
                     continue;
                 }
             };
-            let response = self.handle_message(message);
-            let send_result = self.producer.send(response).map_err(|e| e.to_string());
+            if self.in_progress {
+                error!("Request in progress, skipping message");
+                let send_result = message
+                    .tx
+                    .send(MpvHandlerResponse::Error("Request in progress".to_string()));
+                match send_result {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("Error sending response in progress: {}", e);
+                    }
+                }
+                continue;
+            }
+            self.in_progress = true;
+            let response = self.handle_message(message.req);
+            let send_result = message.tx.send(response).map_err(|e| e.to_string());
+            self.in_progress = false;
             match send_result {
                 Ok(_) => {}
                 Err(e) => {
@@ -162,6 +215,14 @@ impl MpvHandler {
                 }
                 MpvHandlerResponse::Ok
             }
+            MpvHandlerMessage::ListDevices() => {
+                let devices = self
+                    .state
+                    .keys()
+                    .map(|k| k.clone())
+                    .collect::<Vec<String>>();
+                MpvHandlerResponse::Devices(devices)
+            }
             MpvHandlerMessage::Play(id) => {
                 if let Some(state) = self.state.get_mut(&id) {
                     if let Some(mpv_sock) = state.mpv_sock.borrow_mut() {
@@ -185,9 +246,8 @@ impl MpvHandler {
                             Err(e) => return e,
                         };
                         let mpv_process = std::process::Command::new("mpv")
-                            .arg("--input-ipc-server")
                             .arg("--no-video")
-                            .arg(format!("/tmp/mpv-socket-{}", id))
+                            .arg(format!("--input-ipc-server=/tmp/mpv-socket-{}", id))
                             .arg(&song.url)
                             .spawn()
                             .map_err(|e| e.to_string())
@@ -196,12 +256,39 @@ impl MpvHandler {
                             Ok(mpv_process) => mpv_process,
                             Err(e) => return e,
                         };
-                        let mpv_sock = UnixStream::connect(format!("/tmp/mpv-socket-{}", id))
+
+                        let socket_path = format!("/tmp/mpv-socket-{}", id);
+                        let timeout = Duration::from_secs(5); // 5 second timeout
+                        let start_time = Instant::now();
+
+                        let mut mpv_sock = UnixStream::connect(&socket_path)
                             .map_err(|e| e.to_string())
                             .map_err(|e| MpvHandlerResponse::Error(e));
+
+                        while start_time.elapsed() < timeout {
+                            match mpv_sock {
+                                Ok(_) => break,
+                                Err(_) => {}
+                            }
+                            mpv_sock = UnixStream::connect(&socket_path)
+                                .map_err(|e| e.to_string())
+                                .map_err(|e| MpvHandlerResponse::Error(e));
+                            error!("Failed to connect to mpv socket, retrying...");
+                            sleep(Duration::from_millis(100));
+                        }
+
+                        if start_time.elapsed() >= timeout {
+                            return MpvHandlerResponse::Error(
+                                "Timeout waiting for MPV socket".to_string(),
+                            );
+                        }
+
                         let mut mpv_sock = match mpv_sock {
                             Ok(mpv_sock) => mpv_sock,
-                            Err(e) => return e,
+                            Err(e) => {
+                                error!("Error connecting to mpv socket: {:?}", e);
+                                return e;
+                            }
                         };
 
                         let command_result =
@@ -373,7 +460,7 @@ impl MpvHandler {
                 }
                 return MpvHandlerResponse::Error("Device does not exist".to_string());
             }
-            MpvHandlerMessage::TimeAndDuration(id) => {
+            MpvHandlerMessage::Time(id) => {
                 if let Some(state) = self.state.get_mut(&id) {
                     if let Some(mpv_sock) = state.mpv_sock.borrow_mut() {
                         let time = get_property(mpv_sock, "time-pos")
@@ -383,6 +470,16 @@ impl MpvHandler {
                             Ok(time) => time,
                             Err(e) => return e,
                         };
+
+                        return MpvHandlerResponse::Time(time.as_f64().unwrap_or(0.0));
+                    }
+                    return MpvHandlerResponse::Time(0.0);
+                }
+                return MpvHandlerResponse::Error("Device does not exist".to_string());
+            }
+            MpvHandlerMessage::Duration(id) => {
+                if let Some(state) = self.state.get_mut(&id) {
+                    if let Some(mpv_sock) = state.mpv_sock.borrow_mut() {
                         let duration = get_property(mpv_sock, "duration")
                             .map_err(|e| e.to_string())
                             .map_err(|e| MpvHandlerResponse::Error(e));
@@ -390,15 +487,218 @@ impl MpvHandler {
                             Ok(duration) => duration,
                             Err(e) => return e,
                         };
-                        return MpvHandlerResponse::TimeAndDuration(
-                            time.as_f64().unwrap_or(0.0),
-                            duration.as_f64().unwrap_or(0.0),
-                        );
+                        return MpvHandlerResponse::Duration(duration.as_f64().unwrap_or(0.0));
                     }
-                    return MpvHandlerResponse::Error("No song is playing".to_string());
+                    return MpvHandlerResponse::Duration(0.0);
                 }
                 return MpvHandlerResponse::Error("Device does not exist".to_string());
             }
         }
+    }
+}
+
+pub type MpvSend = Sender<ReqWrapper<MpvHandlerMessage, MpvHandlerResponse>>;
+
+pub trait MpvRequest {
+    async fn mpv_request(
+        &self,
+        req: MpvHandlerMessage,
+    ) -> Result<MpvHandlerResponse, Box<dyn std::error::Error>>;
+
+    async fn add_song_to_playlist(
+        &self,
+        speaker: &str,
+        song: Song,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Add(speaker.to_string(), song.clone()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn play(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Play(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn pause(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Pause(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn stop(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Stop(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn next(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Next(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn seek(&self, speaker: &str, time: f64) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Seek(speaker.to_string(), time))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn set_volume(
+        &self,
+        speaker: &str,
+        volume: f64,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Volume(speaker.to_string(), volume))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn get_volume(&self, speaker: &str) -> Result<f64, Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::GetVolume(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Volume(vol) => Ok(vol),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn remove_song(
+        &self,
+        speaker: &str,
+        index: usize,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Remove(speaker.to_string(), index))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn clear_playlist(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Clear(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn list_playlist(&self, speaker: &str) -> Result<Vec<Song>, Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::List(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::List(songs) => Ok(songs),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn get_time(&self, speaker: &str) -> Result<f64, Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Time(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Time(time) => Ok(time),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn get_duration(&self, speaker: &str) -> Result<f64, Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::Duration(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Duration(duration) => Ok(duration),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn add_device(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::AddDevice(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn remove_device(&self, speaker: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let response = self
+            .mpv_request(MpvHandlerMessage::RemoveDevice(speaker.to_string()))
+            .await?;
+        match response {
+            MpvHandlerResponse::Ok => Ok(()),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+
+    async fn list_devices(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let response = self.mpv_request(MpvHandlerMessage::ListDevices()).await?;
+        match response {
+            MpvHandlerResponse::Devices(devices) => Ok(devices),
+            MpvHandlerResponse::Error(e) => Err(e.into()),
+            r => Err(format!("Unexpected response: {:?}", r).into()),
+        }
+    }
+}
+
+impl MpvRequest for MpvSend {
+    async fn mpv_request(
+        &self,
+        req: MpvHandlerMessage,
+    ) -> Result<MpvHandlerResponse, Box<dyn std::error::Error>> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.send(ReqWrapper { req, tx })?;
+        Ok(rx.recv()?)
     }
 }

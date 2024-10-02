@@ -3,15 +3,20 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AppendSongToPlaylistArgs } from '../models/AppendSongToPlaylistArgs';
+import type { CompleteArgs } from '../models/CompleteArgs';
+import type { CompleteReturn } from '../models/CompleteReturn';
 import type { CreateDirectoryArgs } from '../models/CreateDirectoryArgs';
 import type { CreateFileArgs } from '../models/CreateFileArgs';
 import type { DeleteFileArgs } from '../models/DeleteFileArgs';
 import type { DeleteFolderArgs } from '../models/DeleteFolderArgs';
 import type { EditFileArgs } from '../models/EditFileArgs';
-import type { GetLoadedModelNameArgs } from '../models/GetLoadedModelNameArgs';
-import type { GetLoadedModelNameReturn } from '../models/GetLoadedModelNameReturn';
+import type { GetLoadedChatModelNameArgs } from '../models/GetLoadedChatModelNameArgs';
+import type { GetLoadedChatModelNameReturn } from '../models/GetLoadedChatModelNameReturn';
+import type { GetLoadedCompletionModelNameArgs } from '../models/GetLoadedCompletionModelNameArgs';
+import type { GetLoadedCompletionModelNameReturn } from '../models/GetLoadedCompletionModelNameReturn';
 import type { GetPlaylistArgs } from '../models/GetPlaylistArgs';
 import type { GetPlaylistReturn } from '../models/GetPlaylistReturn';
+import type { GetSongDurationReturn } from '../models/GetSongDurationReturn';
 import type { GetSongTimeArgs } from '../models/GetSongTimeArgs';
 import type { GetSongTimeReturn } from '../models/GetSongTimeReturn';
 import type { GetSpeakersReturn } from '../models/GetSpeakersReturn';
@@ -23,10 +28,14 @@ import type { IsLockedArgs } from '../models/IsLockedArgs';
 import type { IsLockedResponse } from '../models/IsLockedResponse';
 import type { ListChatModelsArgs } from '../models/ListChatModelsArgs';
 import type { ListChatModelsReturn } from '../models/ListChatModelsReturn';
-import type { ListFilesAndDirectoriesArgs } from '../models/ListFilesAndDirectoriesArgs';
-import type { ListFilesAndDirectoriesResponse } from '../models/ListFilesAndDirectoriesResponse';
-import type { LoadModelArgs } from '../models/LoadModelArgs';
-import type { LoadModelReturn } from '../models/LoadModelReturn';
+import type { ListCompletionModelsArgs } from '../models/ListCompletionModelsArgs';
+import type { ListCompletionModelsReturn } from '../models/ListCompletionModelsReturn';
+import type { ListFilesArgs } from '../models/ListFilesArgs';
+import type { ListFilesResponse } from '../models/ListFilesResponse';
+import type { LoadChatModelArgs } from '../models/LoadChatModelArgs';
+import type { LoadChatModelReturn } from '../models/LoadChatModelReturn';
+import type { LoadCompletionModelArgs } from '../models/LoadCompletionModelArgs';
+import type { LoadCompletionModelReturn } from '../models/LoadCompletionModelReturn';
 import type { PauseArgs } from '../models/PauseArgs';
 import type { PlayAudioArgs } from '../models/PlayAudioArgs';
 import type { RemoveSongFromPlaylistAtIndexArgs } from '../models/RemoveSongFromPlaylistAtIndexArgs';
@@ -35,6 +44,7 @@ import type { SendChatArgs } from '../models/SendChatArgs';
 import type { SendChatReturn } from '../models/SendChatReturn';
 import type { SetSongTimeArgs } from '../models/SetSongTimeArgs';
 import type { SetVolumeArgs } from '../models/SetVolumeArgs';
+import type { StopArgs } from '../models/StopArgs';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -50,6 +60,20 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/append_song_to_playlist',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns CompleteReturn OK
+     * @throws ApiError
+     */
+    public static postApiComplete(
+        body: CompleteArgs,
+    ): CancelablePromise<CompleteReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/complete',
             body: body,
         });
     }
@@ -125,15 +149,29 @@ export class DefaultService {
     }
     /**
      * @param body
-     * @returns GetLoadedModelNameReturn OK
+     * @returns GetLoadedChatModelNameReturn OK
      * @throws ApiError
      */
-    public static postApiGetLoadedModelName(
-        body: GetLoadedModelNameArgs,
-    ): CancelablePromise<GetLoadedModelNameReturn> {
+    public static postApiGetLoadedChatModelName(
+        body: GetLoadedChatModelNameArgs,
+    ): CancelablePromise<GetLoadedChatModelNameReturn> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/get_loaded_model_name',
+            url: '/api/get_loaded_chat_model_name',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns GetLoadedCompletionModelNameReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetLoadedCompletionModelName(
+        body: GetLoadedCompletionModelNameArgs,
+    ): CancelablePromise<GetLoadedCompletionModelNameReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_loaded_completion_model_name',
             body: body,
         });
     }
@@ -148,6 +186,20 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/get_playlist',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns GetSongDurationReturn OK
+     * @throws ApiError
+     */
+    public static postApiGetSongDuration(
+        body: GetSongTimeArgs,
+    ): CancelablePromise<GetSongDurationReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/get_song_duration',
             body: body,
         });
     }
@@ -233,29 +285,57 @@ export class DefaultService {
     }
     /**
      * @param body
-     * @returns ListFilesAndDirectoriesResponse OK
+     * @returns ListCompletionModelsReturn OK
      * @throws ApiError
      */
-    public static postApiListFilesAndDirectories(
-        body: ListFilesAndDirectoriesArgs,
-    ): CancelablePromise<ListFilesAndDirectoriesResponse> {
+    public static postApiListCompletionModels(
+        body: ListCompletionModelsArgs,
+    ): CancelablePromise<ListCompletionModelsReturn> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/list_files_and_directories',
+            url: '/api/list_completion_models',
             body: body,
         });
     }
     /**
      * @param body
-     * @returns LoadModelReturn OK
+     * @returns ListFilesResponse OK
      * @throws ApiError
      */
-    public static postApiLoadModel(
-        body: LoadModelArgs,
-    ): CancelablePromise<LoadModelReturn> {
+    public static postApiListFiles(
+        body: ListFilesArgs,
+    ): CancelablePromise<ListFilesResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/load_model',
+            url: '/api/list_files',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns LoadChatModelReturn OK
+     * @throws ApiError
+     */
+    public static postApiLoadChatModel(
+        body: LoadChatModelArgs,
+    ): CancelablePromise<LoadChatModelReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/load_chat_model',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns LoadCompletionModelReturn OK
+     * @throws ApiError
+     */
+    public static postApiLoadCompletionModel(
+        body: LoadCompletionModelArgs,
+    ): CancelablePromise<LoadCompletionModelReturn> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/load_completion_model',
             body: body,
         });
     }
@@ -354,6 +434,20 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/set_volume',
+            body: body,
+        });
+    }
+    /**
+     * @param body
+     * @returns boolean OK
+     * @throws ApiError
+     */
+    public static postApiStop(
+        body: StopArgs,
+    ): CancelablePromise<boolean> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/stop',
             body: body,
         });
     }

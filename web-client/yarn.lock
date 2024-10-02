@@ -1192,11 +1192,6 @@
     "@lezer/highlight" "^1.0.0"
     "@lezer/lr" "^1.4.0"
 
-"@mantine/hooks@^7.12.1":
-  version "7.12.1"
-  resolved "https://registry.yarnpkg.com/@mantine/hooks/-/hooks-7.12.1.tgz#a2b402b02eb2f8bb64739656dce87e00935f92f8"
-  integrity sha512-YPA3qiMHJkWID5+YzakBaLvjHtX3Fg3PdPY49iIb/CaWM9+lrJ+77TOVS7bsY7ZTBHXUfzft1/6Woqt3xSuweA==
-
 "@mdxeditor/editor@^3.11.5":
   version "3.11.5"
   resolved "https://registry.yarnpkg.com/@mdxeditor/editor/-/editor-3.11.5.tgz#269419b011ead007240bb35f53e253cceba4a9a1"

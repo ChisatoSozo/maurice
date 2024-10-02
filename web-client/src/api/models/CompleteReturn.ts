@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * GetLoadedModelNameReturn
+ * CompleteReturn
  *
  * <details><summary>JSON schema</summary>
  *
@@ -15,7 +15,7 @@
      * ```
      * </details>
      */
-    export type GetLoadedModelNameReturn = {
+    export type CompleteReturn = {
         value: string;
     };
 

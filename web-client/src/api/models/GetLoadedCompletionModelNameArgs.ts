@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * GetLoadedModelNameArgs
+ * GetLoadedCompletionModelNameArgs
  *
  * <details><summary>JSON schema</summary>
  *
@@ -22,7 +22,7 @@
                  * ```
                  * </details>
                  */
-                export type GetLoadedModelNameArgs = {
+                export type GetLoadedCompletionModelNameArgs = {
                     blank_arg: boolean;
                 };
 

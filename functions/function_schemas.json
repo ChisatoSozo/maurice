@@ -2,18 +2,18 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "get_loaded_model_name": {
+    "get_loaded_chat_model_name": {
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "const": "get_loaded_model_name"
+          "const": "get_loaded_chat_model_name"
         },
         "args": {
-          "$ref": "#/definitions/GetLoadedModelNameArgs"
+          "$ref": "#/definitions/GetLoadedChatModelNameArgs"
         },
         "return": {
-          "$ref": "#/definitions/GetLoadedModelNameReturn"
+          "$ref": "#/definitions/GetLoadedChatModelNameReturn"
         }
       },
       "required": [
@@ -42,18 +42,18 @@
         "return"
       ]
     },
-    "load_model": {
+    "load_chat_model": {
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "const": "load_model"
+          "const": "load_chat_model"
         },
         "args": {
-          "$ref": "#/definitions/LoadModelArgs"
+          "$ref": "#/definitions/LoadChatModelArgs"
         },
         "return": {
-          "$ref": "#/definitions/LoadModelReturn"
+          "$ref": "#/definitions/LoadChatModelReturn"
         }
       },
       "required": [
@@ -101,11 +101,91 @@
         "args",
         "return"
       ]
+    },
+    "complete": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "complete"
+        },
+        "args": {
+          "$ref": "#/definitions/CompleteArgs"
+        },
+        "return": {
+          "$ref": "#/definitions/CompleteReturn"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return"
+      ]
+    },
+    "get_loaded_completion_model_name": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "get_loaded_completion_model_name"
+        },
+        "args": {
+          "$ref": "#/definitions/GetLoadedCompletionModelNameArgs"
+        },
+        "return": {
+          "$ref": "#/definitions/GetLoadedCompletionModelNameReturn"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return"
+      ]
+    },
+    "list_completion_models": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "list_completion_models"
+        },
+        "args": {
+          "$ref": "#/definitions/ListCompletionModelsArgs"
+        },
+        "return": {
+          "$ref": "#/definitions/ListCompletionModelsReturn"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return"
+      ]
+    },
+    "load_completion_model": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "load_completion_model"
+        },
+        "args": {
+          "$ref": "#/definitions/LoadCompletionModelArgs"
+        },
+        "return": {
+          "$ref": "#/definitions/LoadCompletionModelReturn"
+        }
+      },
+      "required": [
+        "name",
+        "args",
+        "return"
+      ]
     }
   },
   "additionalProperties": false,
   "definitions": {
-    "GetLoadedModelNameArgs": {
+    "GetLoadedChatModelNameArgs": {
       "type": "object",
       "properties": {
         "blank_arg": {
@@ -116,7 +196,7 @@
         "blank_arg"
       ]
     },
-    "GetLoadedModelNameReturn": {
+    "GetLoadedChatModelNameReturn": {
       "type": "string",
       "stream": false
     },
@@ -138,7 +218,7 @@
       },
       "stream": false
     },
-    "LoadModelArgs": {
+    "LoadChatModelArgs": {
       "type": "object",
       "properties": {
         "model_name": {
@@ -153,7 +233,7 @@
         "cache_quant"
       ]
     },
-    "LoadModelReturn": {
+    "LoadChatModelReturn": {
       "type": "boolean",
       "stream": false
     },
@@ -194,6 +274,77 @@
     "SendChatStreamReturn": {
       "type": "string",
       "stream": true
+    },
+    "CompleteArgs": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "max_new_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prompt",
+        "max_new_tokens"
+      ]
+    },
+    "CompleteReturn": {
+      "type": "string",
+      "stream": false
+    },
+    "GetLoadedCompletionModelNameArgs": {
+      "type": "object",
+      "properties": {
+        "blank_arg": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blank_arg"
+      ]
+    },
+    "GetLoadedCompletionModelNameReturn": {
+      "type": "string",
+      "stream": false
+    },
+    "ListCompletionModelsArgs": {
+      "type": "object",
+      "properties": {
+        "blank_arg": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blank_arg"
+      ]
+    },
+    "ListCompletionModelsReturn": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "stream": false
+    },
+    "LoadCompletionModelArgs": {
+      "type": "object",
+      "properties": {
+        "model_name": {
+          "type": "string"
+        },
+        "cache_quant": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_name",
+        "cache_quant"
+      ]
+    },
+    "LoadCompletionModelReturn": {
+      "type": "boolean",
+      "stream": false
     }
   }
 }

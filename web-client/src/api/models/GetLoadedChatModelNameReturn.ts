@@ -3,19 +3,19 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * LoadModelReturn
+ * GetLoadedChatModelNameReturn
  *
  * <details><summary>JSON schema</summary>
  *
  * ```json
  * {
-     * "type": "boolean",
+     * "type": "string",
      * "stream": false
      * }
      * ```
      * </details>
      */
-    export type LoadModelReturn = {
-        value: boolean;
+    export type GetLoadedChatModelNameReturn = {
+        value: string;
     };
 

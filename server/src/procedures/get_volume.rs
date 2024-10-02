@@ -1,7 +1,7 @@
 use std::error::Error;
 
-use crate::types::speaker::MultiSpeaker;
+use crate::types::mpv_handler::{MpvRequest, MpvSend};
 
-pub fn get_volume(speakers: &MultiSpeaker, speaker_name: &str) -> Result<f64, Box<dyn Error>> {
-    Ok(speakers.get_volume(speaker_name)?)
+pub async fn get_volume(send: &MpvSend, speaker: &str) -> Result<f64, Box<dyn Error>> {
+    send.get_volume(speaker).await
 }

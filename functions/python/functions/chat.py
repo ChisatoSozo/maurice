@@ -174,7 +174,7 @@ def list_chat_models(blank_arg: bool) -> list[str]:
     models = [model for model in models if os.path.isdir(os.path.join(os.path.dirname(__file__), "../models", model))]
     return models
 
-def load_model(model_name: str, cache_quant: int) -> bool:
+def load_chat_model(model_name: str, cache_quant: int) -> bool:
     global loaded_model
     if loaded_model is not None:
         del loaded_model
@@ -182,7 +182,7 @@ def load_model(model_name: str, cache_quant: int) -> bool:
     loaded_model = ChatModel(model_name, cache_quant)
     return True
 
-def get_loaded_model_name(blank_arg: bool) -> str:
+def get_loaded_chat_model_name(blank_arg: bool) -> str:
     global loaded_model
     if loaded_model is None:
         return ""

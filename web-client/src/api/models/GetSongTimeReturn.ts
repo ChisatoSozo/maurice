@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type GetSongTimeReturn = {
-    song_duration: number;
-    song_time: number;
+    time: number;
 };
 

@@ -3,11 +3,10 @@ use actix_web::{
     Error,
 };
 
-use log::error;
 use paperclip::actix::{api_v2_operation, post, Apiv2Schema};
 use serde::Deserialize;
 
-use crate::{procedures::refresh_speakers::refresh_speakers, GlobalState};
+use crate::{procedures, GlobalState};
 
 #[derive(Debug, Deserialize, Apiv2Schema)]
 struct RemoveSongFromPlaylistAtIndexArgs {
@@ -21,20 +20,14 @@ pub fn remove_song_from_playlist_at_index(
     gs: Data<GlobalState>,
     body: Json<RemoveSongFromPlaylistAtIndexArgs>,
 ) -> Result<Json<bool>, Error> {
-    let speakers = gs.speakers.clone();
-    let mut speakers_lock = speakers.lock().map_err(|e| {
-        error!("Error getting speakers_lock: {}", e);
-        actix_web::error::ErrorInternalServerError(format!("Error getting speakers_lock: {}", e))
-    })?;
+    let send = &gs.mpv_send;
 
-    refresh_speakers(&mut speakers_lock).expect("Failed to refresh speakers");
-
-    speakers_lock
-        .remove_song_from_playlist_at_index(&body.speaker, body.index)
-        .map_err(|e| {
-            error!("Error getting volume: {}", e);
-            actix_web::error::ErrorInternalServerError(format!("Error getting volume: {}", e))
-        })?;
+    procedures::remove_song_from_playlist_at_index::remove_song_from_playlist_at_index(
+        send,
+        &body.speaker,
+        body.index,
+    )
+    .await?;
 
     Ok(Json(true))
 }

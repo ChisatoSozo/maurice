@@ -1,6 +1,3 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { MauriceApi, OpenAPI } from "../api";
-import { useLocation } from "react-router-dom";
 import {
   headingsPlugin,
   listsPlugin,
@@ -9,94 +6,168 @@ import {
   markdownShortcutPlugin,
   MDXEditor,
   toolbarPlugin,
-  UndoRedo,
   BoldItalicUnderlineToggles,
-  CodeToggle,
   InsertImage,
-  imagePlugin,
+  MDXEditorMethods,
+  // imagePlugin,
+  // MDXEditorMethods,
 } from "@mdxeditor/editor";
+import { Box, Container } from "@mui/material";
 import "@mdxeditor/editor/style.css";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { MauriceApi, OpenAPI } from "../api";
+import { useCompletion } from "../hooks/useCompletion";
+// import { LoadCompletionModel } from "../components/LoadCompletionModel";
+
+const useInitialMarkdown = (path: string) => {
+  const [markdown, setMarkdown] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchMarkdown = async () => {
+      const res = await fetch(
+        OpenAPI.BASE + "/files" + path + "?" + Date.now()
+      );
+      const text = await res.text();
+      const decoded = decodeURIComponent(text);
+      setMarkdown(decoded);
+    };
+    fetchMarkdown();
+  }, [path]);
+  return markdown;
+};
+
+const COMPLETION_WRAPPED_START = "*";
+const COMPLETION_WRAPPED_END = "*";
 
 export const EditPage: React.FC = () => {
-  const location = useLocation();
-  const path = location.pathname.replace("/edit/", "");
-  const [content, setContent] = useState<string | null>(null);
+  const path = useLocation().pathname.replace("/edit", "");
+  const initialMarkdown = useInitialMarkdown(path);
+  const { component, updateContent, completion, acceptOrRejectCompletion } =
+    useCompletion();
+  const [preCompletionMarkdown, setPreCompletionMarkdown] = useState<
+    string | null
+  >(null);
+  const editorRef = useRef<MDXEditorMethods | null>(null);
 
-  const saveContent = useCallback(
-    async (contentToSave: string) => {
-      const base64 = btoa(contentToSave);
+  useEffect(() => {
+    if (!completion) {
+      return;
+    }
+    const preCompletionMarkdown = editorRef.current?.getMarkdown() || "";
+    setPreCompletionMarkdown(preCompletionMarkdown);
+    //if the completion starts with whitespace, move the whitespace before the COMPLETION_WRAPPED_START
+    const whitespaceAtTheStart = (completion.match(/^\s+/)?.[0] || "").replace(
+      " ",
+      "&#x20;"
+    );
+    const completionWithoutWhitespace = completion.replace(/^\s+/, "");
+
+    editorRef.current?.insertMarkdown(
+      whitespaceAtTheStart +
+        COMPLETION_WRAPPED_START +
+        completionWithoutWhitespace +
+        COMPLETION_WRAPPED_END
+    );
+  }, [completion]);
+
+  const newMarkdown = useCallback(
+    async (markdown: string) => {
+      console.log(markdown);
+      if (completion) {
+        return;
+      }
+      updateContent(markdown);
       await MauriceApi.postApiEditFile({
-        path,
-        content: base64,
+        path: decodeURIComponent(path),
+        content: btoa(encodeURIComponent(markdown)),
       });
     },
-    [path]
+    [completion, path, updateContent]
   );
 
-  useEffect(() => {
-    const fetchContent = async () => {
-      const fullPath = `${OpenAPI.BASE}/files/${path}`;
-      const text = await fetch(fullPath).then((response) => response.text());
-      setContent(text);
-      await saveContent(text);
-    };
-    fetchContent();
-  }, [path, saveContent]);
+  const rejectCompletion = useCallback(() => {
+    if (!preCompletionMarkdown || !completion) {
+      return;
+    }
+    acceptOrRejectCompletion();
+    editorRef.current?.focus();
+    editorRef.current?.setMarkdown("");
+    editorRef.current?.insertMarkdown(preCompletionMarkdown || "");
+    setPreCompletionMarkdown(null);
+  }, [acceptOrRejectCompletion, completion, preCompletionMarkdown]);
 
-  useEffect(() => {
-    if (content === null) return;
-    saveContent(content);
-  }, [content, saveContent]);
+  const keyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (completion) {
+        //if tab is pressed, accept completion
+        if (e.key === "Tab" || e.key === "@") {
+          e.preventDefault();
+          updateContent(preCompletionMarkdown + completion);
+          acceptOrRejectCompletion();
+          editorRef.current?.focus();
+          editorRef.current?.setMarkdown("");
+          editorRef.current?.insertMarkdown(preCompletionMarkdown + completion);
+        } else {
+          rejectCompletion();
+        }
+        setPreCompletionMarkdown(null);
+      }
+    },
+    [
+      acceptOrRejectCompletion,
+      completion,
+      preCompletionMarkdown,
+      rejectCompletion,
+      updateContent,
+    ]
+  );
 
-  useEffect(() => {
-    if (content === null) return;
-    const interval = setInterval(() => saveContent(content), 5000);
-    return () => clearInterval(interval);
-  }, [content, saveContent]);
-
-  const handleImageUpload = useCallback(async (image: File) => {
-    return new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        const imagePath = `/images/${image.name}`;
-        await MauriceApi.postApiCreateFile({ path: imagePath });
-        await MauriceApi.postApiEditFile({
-          path: imagePath,
-          content: base64.split(",")[1], // Remove the "data:image/..." prefix
-        });
-        resolve(`${OpenAPI.BASE}/files${imagePath}`);
-      };
-      reader.readAsDataURL(image);
-    });
-  }, []);
-
-  if (content === null) {
-    return <div>Loading...</div>;
+  if (initialMarkdown === null) {
+    return <Container>Loading...</Container>;
   }
 
   return (
-    <MDXEditor
-      markdown={content}
-      plugins={[
-        headingsPlugin(),
-        listsPlugin(),
-        quotePlugin(),
-        thematicBreakPlugin(),
-        markdownShortcutPlugin(),
-        imagePlugin({ imageUploadHandler: handleImageUpload }),
-        toolbarPlugin({
-          toolbarContents: () => (
-            <>
-              <UndoRedo />
-              <BoldItalicUnderlineToggles />
-              <CodeToggle />
-              <InsertImage />
-            </>
-          ),
-        }),
-      ]}
-      onChange={setContent}
-    />
+    <Container
+      onKeyDown={(e) => keyDown(e)}
+      onMouseEnter={() => rejectCompletion()}
+      onMouseMove={() => rejectCompletion()}
+      onTouchStart={() => rejectCompletion()}
+      onTouchMove={() => rejectCompletion()}
+    >
+      <MDXEditor
+        contentEditableClassName="mdxeditor"
+        ref={editorRef}
+        markdown={initialMarkdown}
+        onChange={newMarkdown}
+        plugins={[
+          headingsPlugin(),
+          listsPlugin(),
+          quotePlugin(),
+          thematicBreakPlugin(),
+          markdownShortcutPlugin(),
+          // imagePlugin({ imageUploadHandler: handleImageUpload }),
+          toolbarPlugin({
+            toolbarContents: () => (
+              <>
+                <Box
+                  display="flex"
+                  flexDirection="row"
+                  alignItems="center"
+                  width="100%"
+                  overflow="hidden"
+                >
+                  <Box display="flex">
+                    <BoldItalicUnderlineToggles />
+                    <InsertImage />
+                  </Box>
+                  <Box flexGrow={1} />
+                  {component}
+                </Box>
+              </>
+            ),
+          }),
+        ]}
+      />
+    </Container>
   );
 };

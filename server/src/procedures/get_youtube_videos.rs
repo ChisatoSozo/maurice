@@ -3,7 +3,7 @@ use regex::Regex;
 use reqwest::Client;
 use std::error::Error;
 
-use crate::types::speaker::Song;
+use crate::types::mpv_handler::Song;
 
 pub async fn get_youtube_videos(search: String) -> Result<Vec<Song>, Box<dyn Error>> {
     let client = Client::builder()

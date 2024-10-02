@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * LoadModelArgs
+ * LoadCompletionModelArgs
  *
  * <details><summary>JSON schema</summary>
  *
@@ -26,7 +26,7 @@
                      * ```
                      * </details>
                      */
-                    export type LoadModelArgs = {
+                    export type LoadCompletionModelArgs = {
                         cache_quant: number;
                         model_name: string;
                     };

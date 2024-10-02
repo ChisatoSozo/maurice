@@ -13,6 +13,9 @@ fn main() {
     let schema = include_str!("../functions/function_schemas.json");
     let schema: Value = serde_json::from_str(schema).unwrap();
 
+    //delete "src/function_routes"
+    let _ = std::fs::remove_dir_all("src/function_routes");
+
     // Create the routes directory if it doesn't exist
     create_dir_all("src/function_routes").unwrap();
 

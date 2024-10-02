@@ -85,7 +85,7 @@ impl PythonProcess {
             } else {
                 // Log non-JSON lines and continue reading
                 if line.len() > 0 {
-                    info!("Non-JSON output from Python process: {}", line);
+                    info!("Py: {}", line);
                 }
 
                 // Continue to the next iteration to read another line
