@@ -1,0 +1,58 @@
+version: "3"
+services:
+  # Rust development service
+  server-dev:
+    build:
+      context: server
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./server:/usr/src/app # Mount local Rust code into the container
+      - cargo-cache:/usr/local/cargo # Cache Cargo dependencies for faster builds
+    ports:
+      - "9090:9090" # Adjust if your Rust app runs on a different port
+    command: cargo run # Recompile and run on code changes
+
+  # Rust production service
+  server-prod:
+    build:
+      context: server
+      dockerfile: Dockerfile.prod # Ensure you have a Dockerfile for production
+    ports:
+      - "8080:8080" # Port mapping for Rust production
+    command: cargo run --release # Adjust the command for Rust production
+
+  # React development service
+  client-dev:
+    build:
+      context: web-client
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./web-client:/usr/src/app # Mount local React code into the container
+      - node_modules:/usr/src/app/node_modules # Persist node_modules for faster installs
+    ports:
+      - "9080:9080" # Adjust if your React app runs on a different port
+    command: yarn dev # Run the React development server
+
+  # React production service
+  client-prod:
+    build:
+      context: web-client
+      dockerfile: Dockerfile.prod # Ensure you have a Dockerfile for production
+    ports:
+      - "80:80" # Port mapping for React production
+    command: yarn prod # Run the React production server
+
+  playground:
+    build:
+      context: playground
+      dockerfile: Dockerfile
+    volumes:
+      - ./playground:/app
+      - /dev/snd:/dev/snd
+    devices:
+      - /dev/snd
+    environment:
+      - PYTHONUNBUFFERED=1
+volumes:
+  cargo-cache: # Volume for caching Rust dependencies
+  node_modules: # Volume for caching React dependencies

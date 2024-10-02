@@ -1,0 +1,4 @@
+watchdog
+sounddevice
+numpy
+soundfile

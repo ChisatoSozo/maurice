@@ -1,0 +1,20 @@
+# Use an official Node.js runtime as the base image
+FROM node:18-alpine
+
+# Set the working directory inside the container
+WORKDIR /usr/src/app
+
+# Copy only the package.json and yarn.lock first to install dependencies (caches layer if unchanged)
+COPY package.json yarn.lock ./
+
+# Install dependencies using Yarn
+RUN yarn install
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the port that your app will run on
+EXPOSE 9080
+
+# Run the development server
+CMD ["yarn", "dev"]

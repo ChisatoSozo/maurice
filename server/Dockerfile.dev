@@ -1,0 +1,33 @@
+# Stage 1: Build dependencies only (cached)
+FROM rust:1.72 as build
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy only Cargo.toml and Cargo.lock to cache dependencies
+COPY Cargo.toml Cargo.lock ./
+
+# Build dependencies to cache them
+RUN cargo fetch
+RUN cargo build --release --offline || true
+
+# Stage 2: Development environment
+FROM rust:1.72 as dev
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy over the pre-built dependencies from the build stage
+COPY --from=build /usr/src/app/target /usr/src/app/target
+COPY --from=build /usr/src/app/Cargo.toml /usr/src/app/Cargo.lock ./
+
+# Copy the source code
+COPY . .
+
+# Install any necessary system dependencies (if needed)
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use bind mount for source code during development to allow live reloads
+CMD ["cargo", "run"]
